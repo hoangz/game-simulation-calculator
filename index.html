@@ -517,11 +517,11 @@ function renderPriceTable() {
         tbody.innerHTML += `<tr>
             <td><input type="text" data-price-idx="${i}" data-field="price" value="${fmtNum(p.price)}" style="${sPrice}"></td>
             <td><input type="text" data-price-idx="${i}" data-field="gold" value="${fmtNum(p.gold)}" style="${sGold}"></td>
-            <td style="color:#4fc3f7;font-weight:600;text-align:right;padding-right:8px;">${goldPerDollar}</td>
+            <td style="color:${stakeColor};font-weight:600;text-align:right;padding-right:8px;">${goldPerDollar}</td>
             <td style="color:${stakeColor};font-weight:700;text-align:right;padding-right:8px;">${stakeText}</td>
-            <td style="color:#ef5350;font-weight:600;text-align:center;">${minG}</td>
-            <td style="color:#ffd54f;font-weight:600;text-align:center;">${avgG}</td>
-            <td style="color:#66bb6a;font-weight:600;text-align:center;">${maxoutAvg}</td>
+            <td style="color:${stakeColor};font-weight:600;text-align:center;">${minG}</td>
+            <td style="color:${stakeColor};font-weight:600;text-align:center;">${avgG}</td>
+            <td style="color:${stakeColor};font-weight:600;text-align:center;">${maxoutAvg}</td>
             <td><button class="small danger" onclick="removePriceRow(${i})">X</button></td>
         </tr>`;
     });
@@ -1100,8 +1100,8 @@ function runSimulation() {
 
 // ==================== STAKE COLOR MAP ====================
 const stakeColors = [
-    '#4fc3f7', '#ffa726', '#4fc3f7', '#ffa726', '#4fc3f7',
-    '#ffa726', '#4fc3f7', '#ffa726', '#4fc3f7', '#ffa726'
+    '#2196f3', '#e65100', '#2196f3', '#e65100', '#2196f3',
+    '#e65100', '#2196f3', '#e65100', '#2196f3', '#e65100'
 ];
 function buildStakeColorMap(results) {
     const uniqueStakes = [...new Set(results.filter(r => r.stake).map(r => r.stake))];
@@ -1179,8 +1179,8 @@ function renderResults() {
             <td>${r.p90Games}</td>
             <td>${r.maxGames}</td>
             <td>${r.avgGames}</td>
-            <td style="color:#66bb6a;">${r.maxoutMin != null ? r.maxoutMin : '—'}</td>
-            <td style="color:#66bb6a;">${r.maxoutAvg != null ? r.maxoutAvg : '—'}</td>
+            <td>${r.maxoutMin != null ? r.maxoutMin : '—'}</td>
+            <td>${r.maxoutAvg != null ? r.maxoutAvg : '—'}</td>
         </tr>`;
     });
     document.getElementById('detailTable').innerHTML = dhtml;
