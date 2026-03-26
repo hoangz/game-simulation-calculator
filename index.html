@@ -1283,6 +1283,23 @@ function updateChart() {
                     }
                 }
             },
+            animation: {
+                onComplete: function() {
+                    const chart = this;
+                    const ctx2 = chart.ctx;
+                    const isLight = document.body.classList.contains('light');
+                    ctx2.font = 'bold 11px Segoe UI';
+                    ctx2.fillStyle = isLight ? '#333' : '#fff';
+                    ctx2.textAlign = 'center';
+                    chart.data.datasets.forEach((ds, di) => {
+                        const meta = chart.getDatasetMeta(di);
+                        meta.data.forEach((bar, i) => {
+                            const val = ds.data[i];
+                            if (val != null) ctx2.fillText(val, bar.x, bar.y - 5);
+                        });
+                    });
+                }
+            },
             scales: {
                 x: {
                     ticks: {
