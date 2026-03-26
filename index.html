@@ -303,7 +303,7 @@
         <div class="config-table-wrap">
             <h3>Price &rarr; Gold Config</h3>
             <table id="priceTable">
-                <thead><tr><th>Price ($)</th><th>Gold</th><th>Gold/$</th><th>Stake</th><th>Min</th><th>Avg</th><th></th></tr></thead>
+                <thead><tr><th>Price ($)</th><th>Gold</th><th>Gold/$</th><th>Stake</th><th>Min</th><th>Avg</th><th>Maxout</th><th></th></tr></thead>
                 <tbody id="priceBody"></tbody>
             </table>
             <div class="table-actions">
@@ -512,6 +512,45 @@ function renderPriceTable() {
         const minG = sr ? sr.minGames : '—';
         const avgG = sr ? sr.avgGames : '—';
 
+        // Calculate min games to maxout (best case: all wins)
+        let maxoutMin = '—';
+        if (stake) {
+            const stakeRow = stakeConfig.find(s => s.stake === stake);
+            if (stakeRow) {
+                const winpts = parseFloat(document.getElementById('winPts').value) || 13.7;
+                const taxRate = parseFloat(document.getElementById('taxRate').value) || 0.1;
+                const potOn = document.getElementById('potEnabled').checked;
+                const potMul = potOn ? (parseInt(document.getElementById('potMultiplier').value) || 1) : 0;
+                const potTax = potOn ? (parseFloat(document.getElementById('potTax').value) || 0.1) : 0;
+                const potStreak = potOn ? (parseInt(document.getElementById('potWinStreak').value) || 2) : 999;
+                const playersPerTable = 4;
+
+                // Best scenario: 1W vs (players-1)L — max win per game
+                const bestWinGold = stake * winpts * (playersPerTable - 1) * (1 - taxRate);
+                const maxoutGold = stakeRow.buyinMax;
+
+                let gold = p.gold;
+                let pot = 0;
+                let streak = 0;
+                let games = 0;
+                while (gold < maxoutGold && games < 99999) {
+                    if (potOn) {
+                        gold -= stake * potMul;
+                        pot += stake * potMul * playersPerTable;
+                    }
+                    gold += bestWinGold;
+                    streak++;
+                    games++;
+                    if (potOn && streak >= potStreak) {
+                        gold += pot * (1 - potTax);
+                        pot = 0;
+                        streak = 0;
+                    }
+                }
+                maxoutMin = games;
+            }
+        }
+
         tbody.innerHTML += `<tr>
             <td><input type="text" data-price-idx="${i}" data-field="price" value="${fmtNum(p.price)}" style="${sPrice}"></td>
             <td><input type="text" data-price-idx="${i}" data-field="gold" value="${fmtNum(p.gold)}" style="${sGold}"></td>
@@ -519,6 +558,7 @@ function renderPriceTable() {
             <td style="color:${stakeColor};font-weight:700;text-align:right;padding-right:8px;">${stakeText}</td>
             <td style="color:#ef5350;font-weight:600;text-align:center;">${minG}</td>
             <td style="color:#ffd54f;font-weight:600;text-align:center;">${avgG}</td>
+            <td style="color:#66bb6a;font-weight:600;text-align:center;">${maxoutMin}</td>
             <td><button class="small danger" onclick="removePriceRow(${i})">X</button></td>
         </tr>`;
     });
