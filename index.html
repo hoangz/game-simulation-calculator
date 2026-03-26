@@ -575,7 +575,7 @@ function validateConfig() {
             const c = sColorMap[s.stake] || '#ffb74d';
             return `<span style="color:${c};font-weight:700;">${fmtNum(s.stake)}</span>`;
         }).join(', ');
-        parts.push(`<span class="warn-tag stake-unused">⚠ No gold package for stakes: ${list}</span>`);
+        parts.push(`<span class="warn-tag stake-unused">⚠ No package for stakes: ${list}</span>`);
     }
     if (unmatchedGold.length > 0) {
         const list = unmatchedGold.map(p => `<span style="font-weight:700;">$${p.price}</span>`).join(', ');
