@@ -517,7 +517,7 @@ function renderPriceTable() {
         if (stake) {
             const stakeRow = stakeConfig.find(s => s.stake === stake);
             if (stakeRow) {
-                const winpts = parseFloat(document.getElementById('winPts').value) || 13.7;
+                const winpts = parseFloat(document.getElementById('winpts').value) || 13.7;
                 const taxRate = parseFloat(document.getElementById('taxRate').value) || 0.1;
                 const potOn = document.getElementById('potEnabled').checked;
                 const potMul = potOn ? (parseInt(document.getElementById('potMultiplier').value) || 1) : 0;
