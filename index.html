@@ -586,6 +586,25 @@ function validateConfig() {
         parts.push(`<span class="warn-tag gold-nomatch">⚠ No matching stake: ${list}</span>`);
     }
 
+    // Maxout gap: maxout of stake[i] < buyinMin of stake[i+1]
+    const sorted = [...stakes].sort((a, b) => a.stake - b.stake);
+    const maxoutGaps = [];
+    for (let i = 0; i < sorted.length - 1; i++) {
+        const curr = sorted[i];
+        const next = sorted[i + 1];
+        if (curr.buyinMax < next.buyinMin) {
+            const cColor = sColorMap[curr.stake] || '#ffb74d';
+            const nColor = sColorMap[next.stake] || '#ffb74d';
+            maxoutGaps.push(
+                `<span style="color:${cColor};font-weight:700;">${fmtNum(curr.stake)}</span> maxout ${fmtNum(curr.buyinMax)} &lt; ` +
+                `<span style="color:${nColor};font-weight:700;">${fmtNum(next.stake)}</span> buyinMin ${fmtNum(next.buyinMin)}`
+            );
+        }
+    }
+    if (maxoutGaps.length > 0) {
+        parts.push(`<span class="warn-tag" style="background:#3e1111;border-color:#ef5350;color:#ef9a9a;">⚠ Maxout gap: ${maxoutGaps.join(' | ')}</span>`);
+    }
+
     if (parts.length > 0) {
         warnDiv.style.display = 'flex';
         warnDiv.innerHTML = parts.join('');
