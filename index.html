@@ -593,16 +593,15 @@ function validateConfig() {
         const curr = sorted[i];
         const next = sorted[i + 1];
         if (curr.buyinMax < next.buyinMin) {
-            const cColor = sColorMap[curr.stake] || '#ffb74d';
-            const nColor = sColorMap[next.stake] || '#ffb74d';
-            maxoutGaps.push(
-                `<span style="color:${cColor};font-weight:700;">${fmtNum(curr.stake)}</span> maxout ${fmtNum(curr.buyinMax)} &lt; ` +
-                `<span style="color:${nColor};font-weight:700;">${fmtNum(next.stake)}</span> buyinMin ${fmtNum(next.buyinMin)}`
-            );
+            maxoutGaps.push({ from: curr.stake });
         }
     }
     if (maxoutGaps.length > 0) {
-        parts.push(`<span class="warn-tag" style="background:#3e1111;border-color:#ef5350;color:#ef9a9a;">⚠ Maxout gap: ${maxoutGaps.join(' | ')}</span>`);
+        const stakeList = maxoutGaps.map(g => g.from).map(s => {
+            const c = sColorMap[s] || '#ef5350';
+            return `<span style="color:${c};font-weight:700;">${fmtNum(s)}</span>`;
+        }).join(', ');
+        parts.push(`<span class="warn-tag" style="background:#3e1111;border-color:#ef5350;color:#ef9a9a;">⚠ Maxout gap: ${stakeList}</span>`);
     }
 
     if (parts.length > 0) {
