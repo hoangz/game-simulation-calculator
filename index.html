@@ -152,6 +152,10 @@
             display: flex; align-items: center; gap: 4px;
         }
         .chart-controls input[type="checkbox"] { accent-color: var(--accent); cursor: pointer; }
+        .scenarios-wrap { padding: 10px 16px; }
+        .scenario-item { background: var(--card-bg); border: 1px solid var(--border); border-radius: 6px; padding: 8px 12px; text-align: center; min-width: 90px; }
+        .scenario-item label { display: block; font-size: 12px; color: var(--text-muted); margin-bottom: 4px; }
+        .scenario-item input { width: 60px; text-align: center; background: var(--input-bg); border: 1px solid var(--border); color: var(--text); border-radius: 4px; padding: 4px; font-size: 14px; font-weight: 600; }
 
         #configWarnings { margin: 10px 0; display: flex; flex-wrap: wrap; gap: 8px; }
         .warn-tag {
@@ -195,11 +199,7 @@
         </div>
         <div class="config-item">
             <label>Players/Table</label>
-            <input type="number" id="playersPerTable" value="4" min="2" max="10" onchange="autoCalcWinRate()">
-        </div>
-        <div class="config-item">
-            <label>Winners/Table</label>
-            <input type="number" id="winnersPerTable" value="1" min="1" max="9" onchange="autoCalcWinRate()">
+            <input type="number" id="playersPerTable" value="4" min="2" max="10" onchange="rebuildScenarios()">
         </div>
         <div class="config-item">
             <label>Players</label>
@@ -216,6 +216,13 @@
             <button class="purple" onclick="document.getElementById('importAllFile').click()">Import Config</button>
             <input type="file" id="importAllFile" accept=".csv,.xlsx,.xls" onchange="importConfigFile(event)">
         </div>
+    </div>
+
+    <!-- Win Scenarios -->
+    <div class="scenarios-wrap" id="scenariosWrap">
+        <h4 style="color:#4fc3f7;margin:0 0 6px;">Win/Lose Scenarios (% xac suat)</h4>
+        <div id="scenariosBody" style="display:flex;gap:10px;flex-wrap:wrap;"></div>
+        <div id="scenarioWarning" style="color:#ef5350;font-size:12px;margin-top:4px;display:none;"></div>
     </div>
 
     <div class="progress-bar" id="progressBar"><div class="fill" id="progressFill"></div></div>
@@ -752,24 +759,74 @@ function percentile(arr, p) {
 }
 
 // ==================== SIMULATION ====================
-function autoCalcWinRate() {
+function rebuildScenarios() {
     const players = parseInt(document.getElementById('playersPerTable').value) || 4;
-    const winners = parseInt(document.getElementById('winnersPerTable').value) || 1;
-    // Clamp winners < players
-    if (winners >= players) document.getElementById('winnersPerTable').value = players - 1;
-    const w = Math.min(winners, players - 1);
-    document.getElementById('winRate').value = Math.round((w / players) * 100);
+    const body = document.getElementById('scenariosBody');
+    const oldScenarios = readScenarios();
+    body.innerHTML = '';
+    // Scenarios: 1 winner to (players-1) winners
+    for (let w = 1; w < players; w++) {
+        const l = players - w;
+        const oldPct = oldScenarios.find(s => s.winners === w);
+        // Default: most weight on 1-winner scenario
+        let defaultPct = 0;
+        if (w === 1) defaultPct = 50;
+        else if (w === players - 1) defaultPct = 15;
+        else defaultPct = Math.round(35 / (players - 2));
+        const pct = oldPct ? oldPct.pct : defaultPct;
+
+        const div = document.createElement('div');
+        div.className = 'scenario-item';
+        div.innerHTML = `<label>${w}W ${l}L</label><input type="number" data-winners="${w}" value="${pct}" min="0" max="100" step="1" onchange="validateScenarios()">%`;
+        body.appendChild(div);
+    }
+    validateScenarios();
+}
+
+function readScenarios() {
+    const inputs = document.querySelectorAll('#scenariosBody input[data-winners]');
+    const scenarios = [];
+    inputs.forEach(inp => {
+        scenarios.push({ winners: parseInt(inp.dataset.winners), pct: parseFloat(inp.value) || 0 });
+    });
+    return scenarios;
+}
+
+function validateScenarios() {
+    const scenarios = readScenarios();
+    const total = scenarios.reduce((s, sc) => s + sc.pct, 0);
+    const warn = document.getElementById('scenarioWarning');
+    if (Math.abs(total - 100) > 0.5) {
+        warn.style.display = 'block';
+        warn.textContent = `Tong = ${total}% (can = 100%)`;
+    } else {
+        warn.style.display = 'none';
+    }
+    // Auto-calc overall winRate
+    const players = parseInt(document.getElementById('playersPerTable').value) || 4;
+    let avgWinRate = 0;
+    scenarios.forEach(sc => { avgWinRate += (sc.pct / 100) * (sc.winners / players); });
+    document.getElementById('winRate').value = Math.round(avgWinRate * 100);
 }
 
 function runSimulation() {
-    const winRate = parseFloat(document.getElementById('winRate').value) / 100;
     const winpts = parseFloat(document.getElementById('winpts').value);
     const losepts = parseFloat(document.getElementById('losepts').value);
     const taxRate = parseFloat(document.getElementById('taxRate').value);
     const playersPerTable = parseInt(document.getElementById('playersPerTable').value) || 4;
-    const winnersPerTable = Math.min(parseInt(document.getElementById('winnersPerTable').value) || 1, playersPerTable - 1);
     const numPlayers = parseInt(document.getElementById('numPlayers').value);
     const maxTurns = parseInt(document.getElementById('maxTurns').value);
+
+    // Build scenario cumulative distribution
+    const scenarios = readScenarios();
+    const totalPct = scenarios.reduce((s, sc) => s + sc.pct, 0);
+    if (Math.abs(totalPct - 100) > 0.5) { alert('Tong scenario phai = 100% (hien tai: ' + totalPct + '%)'); return; }
+    const scenarioCDF = [];
+    let cumul = 0;
+    scenarios.forEach(sc => {
+        cumul += sc.pct / 100;
+        scenarioCDF.push({ winners: sc.winners, losers: playersPerTable - sc.winners, cumul });
+    });
 
     const priceGoldConfig = readPriceGold();
     const stakeConfig = readStakeConfig();
@@ -821,11 +878,29 @@ function runSimulation() {
             return;
         }
 
-        const losers = playersPerTable - winnersPerTable;
-        const winGold = stake * winpts * losers * (1 - taxRate) / winnersPerTable;
-        const loseGold = stake * losepts;
         const multiplier = cfg.gold / stake;
         const bankrupt = stake;
+
+        // Precompute win/lose gold for each scenario
+        const scenarioCalc = scenarioCDF.map(sc => ({
+            cumul: sc.cumul,
+            winners: sc.winners,
+            losers: sc.losers,
+            winChance: sc.winners / playersPerTable,
+            winGold: stake * winpts * sc.losers * (1 - taxRate) / sc.winners,
+            loseGold: stake * losepts
+        }));
+
+        // For display, use weighted average
+        let avgWinGold = 0, avgLoseGold = 0;
+        scenarios.forEach(sc => {
+            const l = playersPerTable - sc.winners;
+            const wg = stake * winpts * l * (1 - taxRate) / sc.winners;
+            const lg = stake * losepts;
+            const pct = sc.pct / 100;
+            avgWinGold += pct * (sc.winners / playersPerTable) * wg;
+            avgLoseGold += pct * (l / playersPerTable) * lg;
+        });
 
         let gamesPlayedList = [];
         let finalGolds = [];
@@ -837,7 +912,15 @@ function runSimulation() {
             let games = 0;
             for (let t = 0; t < maxTurns; t++) {
                 if (gold < bankrupt) break;
-                gold = (Math.random() < winRate) ? gold + winGold : Math.max(0, gold - loseGold);
+                // Pick scenario
+                const roll = Math.random();
+                let sc = scenarioCalc[scenarioCalc.length - 1];
+                for (let s = 0; s < scenarioCalc.length; s++) {
+                    if (roll < scenarioCalc[s].cumul) { sc = scenarioCalc[s]; break; }
+                }
+                // Am I a winner in this scenario?
+                const isWinner = Math.random() < sc.winChance;
+                gold = isWinner ? gold + sc.winGold : Math.max(0, gold - sc.loseGold);
                 games++;
             }
             if (games === maxTurns) maxTurnCount++;
@@ -854,7 +937,7 @@ function runSimulation() {
 
         simulationResults.push({
             price: cfg.price, gold: cfg.gold, stake, multiplier: multiplier.toFixed(1),
-            winGold, loseGold,
+            winGold: avgWinGold, loseGold: avgLoseGold,
             avgGames: avgGames.toFixed(1),
             medianGames: medianGames.toFixed(1),
             p10Games: percentile(gamesPlayedList, 10).toFixed(1),
@@ -1343,6 +1426,7 @@ updateThemeBtn();
 // ==================== INIT ====================
 renderStakeTable();  // stake DOM phải render trước
 renderPriceTable();  // gọi renderGoldPerDollarChart() ở cuối, lúc này stake DOM đã sẵn
+rebuildScenarios(); // init win/lose scenario inputs
 </script>
 </body>
 </html>
