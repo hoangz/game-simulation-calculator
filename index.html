@@ -248,7 +248,7 @@
                 <input type="number" id="maxTurns" value="500" min="50" max="5000">
             </div>
             <button onclick="runSimulation()" id="btnRun">Run Simulation</button>
-            <button onclick="downloadCSV()" class="green" id="btnCSV" disabled>Download Results</button>
+            <button onclick="downloadCSV()" class="green" id="btnCSV" disabled>Download Results (.xlsx)</button>
             <button onclick="exportAllCSV()" class="orange">Export Config CSV</button>
             <button class="purple" onclick="document.getElementById('importAllFile').click()">Import Config</button>
             <input type="file" id="importAllFile" accept=".csv,.xlsx,.xls" onchange="importConfigFile(event)">
@@ -990,6 +990,7 @@ function runSimulation() {
         let burnRates = [];
         let maxTurnCount = 0;
         let maxoutGamesList = [];
+        let playerDetails = [];
 
         for (let p = 0; p < numPlayers; p++) {
             let gold = cfg.gold;
@@ -997,10 +998,15 @@ function runSimulation() {
             let pot = 0;
             let winStreak = 0;
             let reachedMaxout = false;
+            let maxoutGame = null;
+            let peakGold = cfg.gold;
+            let wins = 0;
+            let potWins = 0;
             for (let t = 0; t < maxTurns; t++) {
                 if (gold < bankrupt) break;
                 if (!reachedMaxout && gold >= maxoutGold) {
                     maxoutGamesList.push(games);
+                    maxoutGame = games;
                     reachedMaxout = true;
                 }
 
@@ -1022,16 +1028,19 @@ function runSimulation() {
                 const isWinner = Math.random() < sc.winChance;
                 gold = isWinner ? gold + sc.winGold : Math.max(0, gold - sc.loseGold);
                 games++;
+                if (isWinner) wins++;
+                if (gold > peakGold) peakGold = gold;
 
                 // Pot streak logic
                 if (potEnabled) {
                     if (isWinner) {
                         winStreak++;
                         if (winStreak >= potWinStreak) {
-                            // Win pot! (minus pot tax)
                             gold += pot * (1 - potTax);
                             pot = 0;
                             winStreak = 0;
+                            potWins++;
+                            if (gold > peakGold) peakGold = gold;
                         }
                     } else {
                         winStreak = 0;
@@ -1042,6 +1051,13 @@ function runSimulation() {
             gamesPlayedList.push(games);
             finalGolds.push(gold);
             burnRates.push(games > 0 ? (cfg.gold - gold) / games : 0);
+            playerDetails.push({
+                player: p + 1, games, wins, losses: games - wins,
+                finalGold: Math.round(gold), peakGold: Math.round(peakGold),
+                bankrupt: gold < bankrupt ? 'Y' : 'N',
+                maxoutGame: maxoutGame,
+                potWins, hitMax: games === maxTurns ? 'Y' : 'N'
+            });
         }
 
         const avgGames = gamesPlayedList.reduce((a, b) => a + b, 0) / numPlayers;
@@ -1069,7 +1085,8 @@ function runSimulation() {
             bankruptRate: ((bankruptCount / numPlayers) * 100).toFixed(1),
             avgBurnRate: Math.round(avgBurnRate),
             maxTurnRate: ((maxTurnCount / numPlayers) * 100).toFixed(1),
-            maxoutMin, maxoutAvg
+            maxoutMin, maxoutAvg,
+            playerDetails
         });
 
         completed++;
@@ -1275,38 +1292,54 @@ function updateChart() {
 function downloadCSV() {
     if (simulationResults.length === 0) return;
 
-    // Section 1: Summary
-    let csv = '[SUMMARY]\n';
-    csv += 'Price,Gold,Stake,Multiplier,WinGold,LoseGold,AvgGames,MedianGames,AvgBurnRate,AvgFinalGold,BankruptRate,HitMaxRate\n';
-    simulationResults.forEach(r => {
-        csv += `${r.price},${r.gold},${r.stake||''},${r.multiplier||''},${Math.round(r.winGold)},${Math.round(r.loseGold)},${r.avgGames},${r.medianGames},${r.avgBurnRate},${r.avgFinalGold},${r.bankruptRate},${r.maxTurnRate}\n`;
-    });
+    // Use SheetJS to create multi-sheet Excel
+    const wb = XLSX.utils.book_new();
 
-    // Section 2: Detail by Percentile
-    csv += '\n[DETAIL_PERCENTILE]\n';
-    csv += 'Price,Stake,Min,P10,P25,Median,P75,P90,Max,Avg,MaxoutMin,MaxoutAvg\n';
+    // Sheet 1: Summary
+    const summaryData = [['Price','Gold','Stake','Multiplier','WinGold','LoseGold','AvgGames','MedianGames','AvgBurnRate','AvgFinalGold','BankruptRate%','HitMaxRate%']];
+    simulationResults.forEach(r => {
+        summaryData.push([r.price, r.gold, r.stake||'', r.multiplier||'', Math.round(r.winGold), Math.round(r.loseGold), parseFloat(r.avgGames), parseFloat(r.medianGames), r.avgBurnRate, r.avgFinalGold, parseFloat(r.bankruptRate), parseFloat(r.maxTurnRate)]);
+    });
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(summaryData), 'Summary');
+
+    // Sheet 2: Percentile Detail
+    const pctData = [['Price','Stake','Min','P10','P25','Median','P75','P90','Max','Avg','MaxoutMin','MaxoutAvg']];
     simulationResults.forEach(r => {
         if (!r.stake) return;
-        csv += `${r.price},${r.stake},${r.minGames},${r.p10Games},${r.p25Games},${r.medianGames},${r.p75Games},${r.p90Games},${r.maxGames},${r.avgGames},${r.maxoutMin != null ? r.maxoutMin : ''},${r.maxoutAvg != null ? r.maxoutAvg : ''}\n`;
+        pctData.push([r.price, r.stake, r.minGames, parseFloat(r.p10Games), parseFloat(r.p25Games), parseFloat(r.medianGames), parseFloat(r.p75Games), parseFloat(r.p90Games), r.maxGames, parseFloat(r.avgGames), r.maxoutMin != null ? r.maxoutMin : '', r.maxoutAvg != null ? parseFloat(r.maxoutAvg) : '']);
+    });
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(pctData), 'Percentile');
+
+    // Sheet 3+: Per-player detail for each price level
+    simulationResults.forEach(r => {
+        if (!r.stake || !r.playerDetails) return;
+        const header = ['Player#','Games','Wins','Losses','FinalGold','PeakGold','Bankrupt','MaxoutGame','PotWins','HitMax'];
+        const rows = [header];
+        r.playerDetails.forEach(pd => {
+            rows.push([pd.player, pd.games, pd.wins, pd.losses, pd.finalGold, pd.peakGold, pd.bankrupt, pd.maxoutGame != null ? pd.maxoutGame : '', pd.potWins, pd.hitMax]);
+        });
+        const sheetName = `$${r.price} (${(r.stake/1000).toFixed(0)}K)`.substring(0, 31);
+        XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(rows), sheetName);
     });
 
-    // Section 3: Config used
-    csv += '\n[CONFIG]\n';
-    csv += `WinRate,${document.getElementById('winRateDisplay').textContent}\n`;
-    csv += `WinPts,${document.getElementById('winpts').value}\n`;
-    csv += `LosePts,${document.getElementById('losepts').value}\n`;
-    csv += `TaxRate,${document.getElementById('taxRate').value}\n`;
-    csv += `Players,${document.getElementById('numPlayers').value}\n`;
-    csv += `MaxTurns,${document.getElementById('maxTurns').value}\n`;
+    // Sheet: Config
+    const cfgData = [['Parameter','Value']];
+    cfgData.push(['WinRate', document.getElementById('winRateDisplay').textContent]);
+    cfgData.push(['WinPts', parseFloat(document.getElementById('winpts').value)]);
+    cfgData.push(['LosePts', parseFloat(document.getElementById('losepts').value)]);
+    cfgData.push(['TaxRate', parseFloat(document.getElementById('taxRate').value)]);
+    cfgData.push(['Players', parseInt(document.getElementById('numPlayers').value)]);
+    cfgData.push(['MaxTurns', parseInt(document.getElementById('maxTurns').value)]);
     const potOn = document.getElementById('potEnabled').checked;
-    csv += `PotEnabled,${potOn}\n`;
+    cfgData.push(['PotEnabled', potOn ? 'Yes' : 'No']);
     if (potOn) {
-        csv += `PotMultiplier,${document.getElementById('potMultiplier').value}\n`;
-        csv += `PotTax,${document.getElementById('potTax').value}\n`;
-        csv += `PotWinStreak,${document.getElementById('potWinStreak').value}\n`;
+        cfgData.push(['PotMultiplier', parseInt(document.getElementById('potMultiplier').value)]);
+        cfgData.push(['PotTax', parseFloat(document.getElementById('potTax').value)]);
+        cfgData.push(['PotWinStreak', parseInt(document.getElementById('potWinStreak').value)]);
     }
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(cfgData), 'Config');
 
-    triggerDownload(csv, 'simulation_results.csv');
+    XLSX.writeFile(wb, 'simulation_results.xlsx');
 }
 
 // ==================== IMPORT / EXPORT CONFIG CSV ====================
