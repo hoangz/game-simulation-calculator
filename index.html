@@ -228,7 +228,7 @@
         <div class="config-table-wrap">
             <h3>Stake &rarr; Buy-in Range</h3>
             <table id="stakeTable">
-                <thead><tr><th>Stake</th><th>Buy-in Min</th><th>Buy-in Max</th><th>Min/Stake</th><th>Max/Stake</th><th>Range</th><th></th></tr></thead>
+                <thead><tr><th>Stake</th><th>Buy-in Min</th><th>Maxout</th><th>Min/Stake</th><th>Max/Stake</th><th>Range</th><th></th></tr></thead>
                 <tbody id="stakeBody"></tbody>
             </table>
             <div class="table-actions">
@@ -289,7 +289,7 @@ const defaultPriceGold = [
     { price: 3,   gold: 4000000 },
     { price: 4,   gold: 5500000 },
     { price: 5,   gold: 8000000 },
-    { price: 7,   gold: 12000000 },
+    { price: 7,   gold: 15000000 },
     { price: 10,  gold: 32000000 },
     { price: 20,  gold: 70000000 },
     { price: 30,  gold: 115000000 },
@@ -299,15 +299,15 @@ const defaultPriceGold = [
 ];
 
 const defaultStakes = [
-    { stake: 40000,      buyinMin: 200000,       buyinMax: 1999999 },
-    { stake: 200000,     buyinMin: 2000000,      buyinMax: 8999999 },
-    { stake: 1000000,    buyinMin: 9000000,      buyinMax: 35999999 },
-    { stake: 3000000,    buyinMin: 36000000,     buyinMax: 59999999 },
-    { stake: 5000000,    buyinMin: 60000000,     buyinMax: 119999999 },
-    { stake: 10000000,   buyinMin: 120000000,    buyinMax: 239999999 },
-    { stake: 20000000,   buyinMin: 240000000,    buyinMax: 599999999 },
-    { stake: 50000000,   buyinMin: 600000000,    buyinMax: 1199999999 },
-    { stake: 100000000,  buyinMin: 1200000000,   buyinMax: 900000000000 },
+    { stake: 40000,      buyinMin: 200000,       buyinMax: 2000000 },
+    { stake: 200000,     buyinMin: 1600000,      buyinMax: 11000000 },
+    { stake: 1000000,    buyinMin: 8000000,      buyinMax: 60000000 },
+    { stake: 2000000,    buyinMin: 16000000,     buyinMax: 195000000 },
+    { stake: 5000000,    buyinMin: 40000000,     buyinMax: 350000000 },
+    { stake: 10000000,   buyinMin: 80000000,     buyinMax: 750000000 },
+    { stake: 20000000,   buyinMin: 160000000,    buyinMax: 1600000000 },
+    { stake: 50000000,   buyinMin: 400000000,    buyinMax: 4250000000 },
+    { stake: 100000000,  buyinMin: 800000000,    buyinMax: 1000000000000 },
 ];
 
 let simulationResults = [];
@@ -722,10 +722,15 @@ function readStakeConfig() {
 
 // ==================== FIND STAKE FOR GOLD ====================
 function findStake(gold, stakeConfig) {
-    for (const s of stakeConfig) {
-        if (gold >= s.buyinMin && gold <= s.buyinMax) return s.stake;
+    // Sort by buyinMin ascending
+    const sorted = stakeConfig.slice().sort((a, b) => a.buyinMin - b.buyinMin);
+    // Find highest stake where gold >= buyinMin
+    let matched = null;
+    for (const s of sorted) {
+        if (gold >= s.buyinMin) matched = s.stake;
+        else break;
     }
-    return null;
+    return matched;
 }
 
 // ==================== PERCENTILE ====================
