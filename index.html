@@ -1125,6 +1125,9 @@ function importExcelFile(file) {
     reader.onload = function(e) {
         const data = new Uint8Array(e.target.result);
         const wb = XLSX.read(data, { type: 'array' });
+        // Clear all config before import
+        defaultPriceGold.length = 0;
+        defaultStakes.length = 0;
         let imported = false;
 
         // Look for sheets containing price/gold data or stake/buyin data
@@ -1139,13 +1142,11 @@ function importExcelFile(file) {
             if (header.some(h => h.includes('price')) && header.some(h => h.includes('gold'))) {
                 const priceIdx = header.findIndex(h => h.includes('price'));
                 const goldIdx = header.findIndex(h => h.includes('gold'));
-                defaultPriceGold.length = 0;
                 for (let i = 1; i < rows.length; i++) {
                     const p = parseFloat(String(rows[i][priceIdx]).replace(/[^0-9.\-eE+]/g, ''));
                     const g = parseFloat(String(rows[i][goldIdx]).replace(/[^0-9.\-eE+]/g, ''));
                     if (g > 0) defaultPriceGold.push({ price: p || 0, gold: g });
                 }
-                renderPriceTable();
                 imported = true;
             }
 
@@ -1155,22 +1156,22 @@ function importExcelFile(file) {
                 const minIdx = header.findIndex(h => h.includes('min'));
                 const maxIdx = header.findIndex(h => h.includes('max'));
                 if (minIdx >= 0 && maxIdx >= 0) {
-                    defaultStakes.length = 0;
                     for (let i = 1; i < rows.length; i++) {
                         const s = parseFloat(String(rows[i][sIdx]).replace(/[^0-9.\-eE+]/g, ''));
                         const mn = parseFloat(String(rows[i][minIdx]).replace(/[^0-9.\-eE+]/g, ''));
                         const mx = parseFloat(String(rows[i][maxIdx]).replace(/[^0-9.\-eE+]/g, ''));
                         if (s > 0) defaultStakes.push({ stake: s, buyinMin: mn, buyinMax: mx });
                     }
-                    renderStakeTable();
                     imported = true;
                 }
             }
         });
 
         if (imported) {
+            renderPriceTable();
+            renderStakeTable();
+            validateConfig();
             scheduleHighlightClear();
-            renderValidationWarnings();
         } else {
             priceSnapshot = null; stakeSnapshot = null;
             alert('Khong tim thay sheet co header price/gold hoac stake/buyin_min/buyin_max.');
@@ -1186,6 +1187,9 @@ function importAllCSV(file) {
     const reader = new FileReader();
     reader.onload = function(e) {
         const text = e.target.result;
+        // Clear all config before import
+        defaultPriceGold.length = 0;
+        defaultStakes.length = 0;
         // Split by sections — handle Excel trailing commas: [PRICE_GOLD],,
         const sections = {};
         let currentSection = null;
@@ -1208,11 +1212,9 @@ function importAllCSV(file) {
         if (sections['PRICE_GOLD']) {
             const rows = parseCSVSection(sections['PRICE_GOLD']);
             if (rows.length > 0) {
-                defaultPriceGold.length = 0;
                 rows.forEach(r => {
                     if (r.length >= 2 && r[1] > 0) defaultPriceGold.push({ price: r[0], gold: r[1] });
                 });
-                renderPriceTable();
                 imported = true;
             }
         }
@@ -1220,37 +1222,34 @@ function importAllCSV(file) {
         if (sections['STAKE_BUYIN']) {
             const rows = parseCSVSection(sections['STAKE_BUYIN']);
             if (rows.length > 0) {
-                defaultStakes.length = 0;
                 rows.forEach(r => {
                     if (r.length >= 3 && r[0] > 0) defaultStakes.push({ stake: r[0], buyinMin: r[1], buyinMax: r[2] });
                 });
-                renderStakeTable();
                 imported = true;
             }
         }
 
-        if (imported) {
-            scheduleHighlightClear();
-        } else {
+        if (!imported) {
             // Try legacy format
             const firstLine = text.trim().split('\n')[0].trim().toLowerCase().replace(/,+$/g, '');
             if (firstLine.includes('price') && firstLine.includes('gold')) {
                 const rows = parseCSVSection(text);
-                if (rows.length > 0) {
-                    defaultPriceGold.length = 0;
-                    rows.forEach(r => { if (r.length >= 2 && r[1] > 0) defaultPriceGold.push({ price: r[0], gold: r[1] }); });
-                    renderPriceTable(); scheduleHighlightClear(); return;
-                }
+                rows.forEach(r => { if (r.length >= 2 && r[1] > 0) defaultPriceGold.push({ price: r[0], gold: r[1] }); });
+                if (defaultPriceGold.length > 0) imported = true;
             }
             if (firstLine.includes('stake') && firstLine.includes('buyin')) {
                 const rows = parseCSVSection(text);
-                if (rows.length > 0) {
-                    defaultStakes.length = 0;
-                    rows.forEach(r => { if (r.length >= 3 && r[0] > 0) defaultStakes.push({ stake: r[0], buyinMin: r[1], buyinMax: r[2] }); });
-                    renderStakeTable(); scheduleHighlightClear(); return;
-                }
+                rows.forEach(r => { if (r.length >= 3 && r[0] > 0) defaultStakes.push({ stake: r[0], buyinMin: r[1], buyinMax: r[2] }); });
+                if (defaultStakes.length > 0) imported = true;
             }
-            // No snapshot needed if import fails
+        }
+
+        if (imported) {
+            renderPriceTable();
+            renderStakeTable();
+            validateConfig();
+            scheduleHighlightClear();
+        } else {
             priceSnapshot = null; stakeSnapshot = null;
             alert('CSV sai format. Can co [PRICE_GOLD] va/hoac [STAKE_BUYIN] section.');
         }
