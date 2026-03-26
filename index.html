@@ -1127,8 +1127,8 @@ if (localStorage.getItem('theme') === 'light') document.body.classList.add('ligh
 updateThemeBtn();
 
 // ==================== INIT ====================
-renderPriceTable();
-renderStakeTable();
+renderStakeTable();  // stake DOM phải render trước
+renderPriceTable();  // gọi renderGoldPerDollarChart() ở cuối, lúc này stake DOM đã sẵn
 </script>
 </body>
 </html>
