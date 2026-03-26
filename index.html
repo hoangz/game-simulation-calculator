@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gold Package - Game Simulation</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <style>
         :root {
             --bg: #0f1923; --bg2: #1a2733; --bg3: #0d1b2a; --border: #2d3e50;
@@ -204,8 +205,8 @@
             <button onclick="runSimulation()" id="btnRun">Chay Simulation</button>
             <button onclick="downloadCSV()" class="green" id="btnCSV" disabled>Tai Result CSV</button>
             <button onclick="exportAllCSV()" class="orange">Export Config CSV</button>
-            <button class="purple" onclick="document.getElementById('importAllFile').click()">Import Config CSV</button>
-            <input type="file" id="importAllFile" accept=".csv" onchange="importAllCSV(event)">
+            <button class="purple" onclick="document.getElementById('importAllFile').click()">Import Config</button>
+            <input type="file" id="importAllFile" accept=".csv,.xlsx,.xls" onchange="importConfigFile(event)">
         </div>
     </div>
 
@@ -1105,9 +1106,80 @@ function parseCSVSection(text) {
     return rows;
 }
 
-function importAllCSV(event) {
+function importConfigFile(event) {
     const file = event.target.files[0];
     if (!file) return;
+    const ext = file.name.split('.').pop().toLowerCase();
+    if (ext === 'xlsx' || ext === 'xls') {
+        importExcelFile(file);
+    } else {
+        importAllCSV(file);
+    }
+    event.target.value = '';
+}
+
+function importExcelFile(file) {
+    takePriceSnapshot();
+    takeStakeSnapshot();
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        const data = new Uint8Array(e.target.result);
+        const wb = XLSX.read(data, { type: 'array' });
+        let imported = false;
+
+        // Look for sheets containing price/gold data or stake/buyin data
+        wb.SheetNames.forEach(name => {
+            const sheet = wb.Sheets[name];
+            const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
+            if (rows.length < 2) return;
+
+            const header = rows[0].map(h => String(h).toLowerCase().trim());
+
+            // Detect price/gold sheet
+            if (header.some(h => h.includes('price')) && header.some(h => h.includes('gold'))) {
+                const priceIdx = header.findIndex(h => h.includes('price'));
+                const goldIdx = header.findIndex(h => h.includes('gold'));
+                defaultPriceGold.length = 0;
+                for (let i = 1; i < rows.length; i++) {
+                    const p = parseFloat(String(rows[i][priceIdx]).replace(/[^0-9.\-eE+]/g, ''));
+                    const g = parseFloat(String(rows[i][goldIdx]).replace(/[^0-9.\-eE+]/g, ''));
+                    if (g > 0) defaultPriceGold.push({ price: p || 0, gold: g });
+                }
+                renderPriceTable();
+                imported = true;
+            }
+
+            // Detect stake/buyin sheet
+            if (header.some(h => h.includes('stake')) && header.some(h => h.includes('buy'))) {
+                const sIdx = header.findIndex(h => h.includes('stake'));
+                const minIdx = header.findIndex(h => h.includes('min'));
+                const maxIdx = header.findIndex(h => h.includes('max'));
+                if (minIdx >= 0 && maxIdx >= 0) {
+                    defaultStakes.length = 0;
+                    for (let i = 1; i < rows.length; i++) {
+                        const s = parseFloat(String(rows[i][sIdx]).replace(/[^0-9.\-eE+]/g, ''));
+                        const mn = parseFloat(String(rows[i][minIdx]).replace(/[^0-9.\-eE+]/g, ''));
+                        const mx = parseFloat(String(rows[i][maxIdx]).replace(/[^0-9.\-eE+]/g, ''));
+                        if (s > 0) defaultStakes.push({ stake: s, buyinMin: mn, buyinMax: mx });
+                    }
+                    renderStakeTable();
+                    imported = true;
+                }
+            }
+        });
+
+        if (imported) {
+            scheduleHighlightClear();
+            renderValidationWarnings();
+        } else {
+            priceSnapshot = null; stakeSnapshot = null;
+            alert('Khong tim thay sheet co header price/gold hoac stake/buyin_min/buyin_max.');
+        }
+    };
+    reader.readAsArrayBuffer(file);
+}
+
+function importAllCSV(file) {
     // Snapshot current data before import
     takePriceSnapshot();
     takeStakeSnapshot();
@@ -1184,7 +1256,6 @@ function importAllCSV(event) {
         }
     };
     reader.readAsText(file);
-    event.target.value = '';
 }
 
 // ==================== THEME ====================
