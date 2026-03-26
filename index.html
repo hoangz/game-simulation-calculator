@@ -303,7 +303,7 @@
         <div class="config-table-wrap">
             <h3>Price &rarr; Gold Config</h3>
             <table id="priceTable">
-                <thead><tr><th>Price ($)</th><th>Gold</th><th>Gold/$</th><th>Stake</th><th>Min</th><th>Avg</th><th>Maxout</th><th></th></tr></thead>
+                <thead><tr><th>Price ($)</th><th>Gold</th><th>Gold/$</th><th>Stake</th><th>Min</th><th>Avg</th><th>Maxout Avg</th><th></th></tr></thead>
                 <tbody id="priceBody"></tbody>
             </table>
             <div class="table-actions">
@@ -512,44 +512,7 @@ function renderPriceTable() {
         const minG = sr ? sr.minGames : '—';
         const avgG = sr ? sr.avgGames : '—';
 
-        // Calculate min games to maxout (best case: all wins)
-        let maxoutMin = '—';
-        if (stake) {
-            const stakeRow = stakeConfig.find(s => s.stake === stake);
-            if (stakeRow) {
-                const winpts = parseFloat(document.getElementById('winpts').value) || 13.7;
-                const taxRate = parseFloat(document.getElementById('taxRate').value) || 0.1;
-                const potOn = document.getElementById('potEnabled').checked;
-                const potMul = potOn ? (parseInt(document.getElementById('potMultiplier').value) || 1) : 0;
-                const potTax = potOn ? (parseFloat(document.getElementById('potTax').value) || 0.1) : 0;
-                const potStreak = potOn ? (parseInt(document.getElementById('potWinStreak').value) || 2) : 999;
-                const playersPerTable = 4;
-
-                // Best scenario: 1W vs (players-1)L — max win per game
-                const bestWinGold = stake * winpts * (playersPerTable - 1) * (1 - taxRate);
-                const maxoutGold = stakeRow.buyinMax;
-
-                let gold = p.gold;
-                let pot = 0;
-                let streak = 0;
-                let games = 0;
-                while (gold < maxoutGold && games < 99999) {
-                    if (potOn) {
-                        gold -= stake * potMul;
-                        pot += stake * potMul * playersPerTable;
-                    }
-                    gold += bestWinGold;
-                    streak++;
-                    games++;
-                    if (potOn && streak >= potStreak) {
-                        gold += pot * (1 - potTax);
-                        pot = 0;
-                        streak = 0;
-                    }
-                }
-                maxoutMin = games;
-            }
-        }
+        const maxoutAvg = sr && sr.maxoutAvg != null ? sr.maxoutAvg : '—';
 
         tbody.innerHTML += `<tr>
             <td><input type="text" data-price-idx="${i}" data-field="price" value="${fmtNum(p.price)}" style="${sPrice}"></td>
@@ -558,7 +521,7 @@ function renderPriceTable() {
             <td style="color:${stakeColor};font-weight:700;text-align:right;padding-right:8px;">${stakeText}</td>
             <td style="color:#ef5350;font-weight:600;text-align:center;">${minG}</td>
             <td style="color:#ffd54f;font-weight:600;text-align:center;">${avgG}</td>
-            <td style="color:#66bb6a;font-weight:600;text-align:center;">${maxoutMin}</td>
+            <td style="color:#66bb6a;font-weight:600;text-align:center;">${maxoutAvg}</td>
             <td><button class="small danger" onclick="removePriceRow(${i})">X</button></td>
         </tr>`;
     });
@@ -998,6 +961,8 @@ function runSimulation() {
 
         const multiplier = cfg.gold / stake;
         const bankrupt = stake;
+        const stakeRow = stakeConfig.find(s => s.stake === stake);
+        const maxoutGold = stakeRow ? stakeRow.buyinMax : Infinity;
 
         // Precompute win/lose gold for each scenario
         const scenarioCalc = scenarioCDF.map(sc => ({
@@ -1024,14 +989,20 @@ function runSimulation() {
         let finalGolds = [];
         let burnRates = [];
         let maxTurnCount = 0;
+        let maxoutGamesList = [];
 
         for (let p = 0; p < numPlayers; p++) {
             let gold = cfg.gold;
             let games = 0;
             let pot = 0;
             let winStreak = 0;
+            let reachedMaxout = false;
             for (let t = 0; t < maxTurns; t++) {
                 if (gold < bankrupt) break;
+                if (!reachedMaxout && gold >= maxoutGold) {
+                    maxoutGamesList.push(games);
+                    reachedMaxout = true;
+                }
 
                 // Pot contribution each turn
                 if (potEnabled) {
@@ -1079,6 +1050,10 @@ function runSimulation() {
         const bankruptCount = finalGolds.filter(g => g < bankrupt).length;
         const avgBurnRate = burnRates.reduce((a, b) => a + b, 0) / numPlayers;
 
+        // Maxout stats
+        const maxoutMin = maxoutGamesList.length > 0 ? Math.min(...maxoutGamesList) : null;
+        const maxoutAvg = maxoutGamesList.length > 0 ? (maxoutGamesList.reduce((a,b) => a+b, 0) / maxoutGamesList.length).toFixed(1) : null;
+
         simulationResults.push({
             price: cfg.price, gold: cfg.gold, stake, multiplier: multiplier.toFixed(1),
             winGold: avgWinGold, loseGold: avgLoseGold,
@@ -1093,7 +1068,8 @@ function runSimulation() {
             avgFinalGold: Math.round(avgFinalGold),
             bankruptRate: ((bankruptCount / numPlayers) * 100).toFixed(1),
             avgBurnRate: Math.round(avgBurnRate),
-            maxTurnRate: ((maxTurnCount / numPlayers) * 100).toFixed(1)
+            maxTurnRate: ((maxTurnCount / numPlayers) * 100).toFixed(1),
+            maxoutMin, maxoutAvg
         });
 
         completed++;
@@ -1170,6 +1146,7 @@ function renderResults() {
     let dhtml = `<tr>
         <th>Price</th><th>Stake</th><th>Min</th><th>P10</th><th>P25</th>
         <th>Median</th><th>P75</th><th>P90</th><th>Max</th><th>Avg</th>
+        <th style="color:#66bb6a;">Maxout Min</th><th style="color:#66bb6a;">Maxout Avg</th>
     </tr>`;
     simulationResults.forEach(r => {
         if (!r.stake) return;
@@ -1185,6 +1162,8 @@ function renderResults() {
             <td>${r.p90Games}</td>
             <td>${r.maxGames}</td>
             <td>${r.avgGames}</td>
+            <td style="color:#66bb6a;">${r.maxoutMin != null ? r.maxoutMin : '—'}</td>
+            <td style="color:#66bb6a;">${r.maxoutAvg != null ? r.maxoutAvg : '—'}</td>
         </tr>`;
     });
     document.getElementById('detailTable').innerHTML = dhtml;
