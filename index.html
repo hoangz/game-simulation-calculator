@@ -194,6 +194,10 @@
             <input type="number" id="taxRate" value="0.1" step="0.01" min="0" max="1">
         </div>
         <div class="config-item">
+            <label>Players/Table</label>
+            <input type="number" id="playersPerTable" value="4" min="2" max="10">
+        </div>
+        <div class="config-item">
             <label>Players</label>
             <input type="number" id="numPlayers" value="2000" min="100" max="10000">
         </div>
@@ -749,6 +753,7 @@ function runSimulation() {
     const winpts = parseFloat(document.getElementById('winpts').value);
     const losepts = parseFloat(document.getElementById('losepts').value);
     const taxRate = parseFloat(document.getElementById('taxRate').value);
+    const playersPerTable = parseInt(document.getElementById('playersPerTable').value) || 4;
     const numPlayers = parseInt(document.getElementById('numPlayers').value);
     const maxTurns = parseInt(document.getElementById('maxTurns').value);
 
@@ -802,7 +807,8 @@ function runSimulation() {
             return;
         }
 
-        const winGold = stake * winpts * taxRate;
+        const losers = playersPerTable - 1;
+        const winGold = stake * winpts * losers * (1 - taxRate);
         const loseGold = stake * losepts;
         const multiplier = cfg.gold / stake;
         const bankrupt = stake;
