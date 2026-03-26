@@ -195,7 +195,11 @@
         </div>
         <div class="config-item">
             <label>Players/Table</label>
-            <input type="number" id="playersPerTable" value="4" min="2" max="10">
+            <input type="number" id="playersPerTable" value="4" min="2" max="10" onchange="autoCalcWinRate()">
+        </div>
+        <div class="config-item">
+            <label>Winners/Table</label>
+            <input type="number" id="winnersPerTable" value="1" min="1" max="9" onchange="autoCalcWinRate()">
         </div>
         <div class="config-item">
             <label>Players</label>
@@ -748,12 +752,22 @@ function percentile(arr, p) {
 }
 
 // ==================== SIMULATION ====================
+function autoCalcWinRate() {
+    const players = parseInt(document.getElementById('playersPerTable').value) || 4;
+    const winners = parseInt(document.getElementById('winnersPerTable').value) || 1;
+    // Clamp winners < players
+    if (winners >= players) document.getElementById('winnersPerTable').value = players - 1;
+    const w = Math.min(winners, players - 1);
+    document.getElementById('winRate').value = Math.round((w / players) * 100);
+}
+
 function runSimulation() {
     const winRate = parseFloat(document.getElementById('winRate').value) / 100;
     const winpts = parseFloat(document.getElementById('winpts').value);
     const losepts = parseFloat(document.getElementById('losepts').value);
     const taxRate = parseFloat(document.getElementById('taxRate').value);
     const playersPerTable = parseInt(document.getElementById('playersPerTable').value) || 4;
+    const winnersPerTable = Math.min(parseInt(document.getElementById('winnersPerTable').value) || 1, playersPerTable - 1);
     const numPlayers = parseInt(document.getElementById('numPlayers').value);
     const maxTurns = parseInt(document.getElementById('maxTurns').value);
 
@@ -807,8 +821,8 @@ function runSimulation() {
             return;
         }
 
-        const losers = playersPerTable - 1;
-        const winGold = stake * winpts * losers * (1 - taxRate);
+        const losers = playersPerTable - winnersPerTable;
+        const winGold = stake * winpts * losers * (1 - taxRate) / winnersPerTable;
         const loseGold = stake * losepts;
         const multiplier = cfg.gold / stake;
         const bankrupt = stake;
