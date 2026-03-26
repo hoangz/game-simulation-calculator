@@ -251,6 +251,8 @@
             <button onclick="downloadCSV()" class="green" id="btnCSV" disabled>Download Results (.xlsx)</button>
             <button onclick="exportAllCSV()" class="orange">Export Config CSV</button>
             <button class="purple" onclick="document.getElementById('importAllFile').click()">Import Config</button>
+            <button onclick="saveConfig()" style="background:#2196f3;">💾 Save</button>
+            <button onclick="clearSavedConfig()" class="small danger" style="font-size:11px;">Clear Save</button>
             <input type="file" id="importAllFile" accept=".csv,.xlsx,.xls" onchange="importConfigFile(event)">
         </div>
 
@@ -1631,6 +1633,82 @@ function importAllCSV(file) {
     reader.readAsText(file);
 }
 
+// ==================== SAVE/LOAD CONFIG ====================
+function saveConfig() {
+    const config = {
+        priceGold: defaultPriceGold,
+        stakes: defaultStakes,
+        params: {
+            winRate: parseFloat(document.getElementById('winRate').value),
+            winPts: parseFloat(document.getElementById('winPts').value),
+            losePts: parseFloat(document.getElementById('losePts').value),
+            taxRate: parseFloat(document.getElementById('taxRate').value),
+            players: parseInt(document.getElementById('numPlayers').value),
+            maxTurns: parseInt(document.getElementById('maxTurns').value),
+        }
+    };
+    // Save pot config if exists
+    const potCheck = document.getElementById('potEnabled');
+    if (potCheck) {
+        config.params.potEnabled = potCheck.checked;
+        config.params.potMultiplier = parseFloat(document.getElementById('potMultiplier')?.value || 1);
+        config.params.potTax = parseFloat(document.getElementById('potTax')?.value || 0.1);
+        config.params.potStreak = parseInt(document.getElementById('potStreak')?.value || 2);
+    }
+    // Save scenarios
+    const s1 = document.getElementById('scenario1w3l');
+    if (s1) {
+        config.params.s1w3l = parseFloat(s1.value || 100);
+        config.params.s2w2l = parseFloat(document.getElementById('scenario2w2l')?.value || 0);
+        config.params.s3w1l = parseFloat(document.getElementById('scenario3w1l')?.value || 0);
+    }
+    localStorage.setItem('gameSimConfig', JSON.stringify(config));
+    alert('Config saved!');
+}
+
+function loadSavedConfig() {
+    const saved = localStorage.getItem('gameSimConfig');
+    if (!saved) return false;
+    try {
+        const config = JSON.parse(saved);
+        if (config.priceGold && config.priceGold.length > 0) {
+            defaultPriceGold.length = 0;
+            config.priceGold.forEach(p => defaultPriceGold.push(p));
+        }
+        if (config.stakes && config.stakes.length > 0) {
+            defaultStakes.length = 0;
+            config.stakes.forEach(s => defaultStakes.push(s));
+        }
+        if (config.params) {
+            const p = config.params;
+            if (p.winRate != null) document.getElementById('winRate').value = p.winRate;
+            if (p.winPts != null) document.getElementById('winPts').value = p.winPts;
+            if (p.losePts != null) document.getElementById('losePts').value = p.losePts;
+            if (p.taxRate != null) document.getElementById('taxRate').value = p.taxRate;
+            if (p.players != null) document.getElementById('numPlayers').value = p.players;
+            if (p.maxTurns != null) document.getElementById('maxTurns').value = p.maxTurns;
+            const potCheck = document.getElementById('potEnabled');
+            if (potCheck && p.potEnabled != null) {
+                potCheck.checked = p.potEnabled;
+                const potFields = document.getElementById('potFields');
+                if (potFields) potFields.style.display = p.potEnabled ? 'flex' : 'none';
+            }
+            if (p.potMultiplier != null) { const el = document.getElementById('potMultiplier'); if (el) el.value = p.potMultiplier; }
+            if (p.potTax != null) { const el = document.getElementById('potTax'); if (el) el.value = p.potTax; }
+            if (p.potStreak != null) { const el = document.getElementById('potStreak'); if (el) el.value = p.potStreak; }
+            if (p.s1w3l != null) { const el = document.getElementById('scenario1w3l'); if (el) el.value = p.s1w3l; }
+            if (p.s2w2l != null) { const el = document.getElementById('scenario2w2l'); if (el) el.value = p.s2w2l; }
+            if (p.s3w1l != null) { const el = document.getElementById('scenario3w1l'); if (el) el.value = p.s3w1l; }
+        }
+        return true;
+    } catch(e) { return false; }
+}
+
+function clearSavedConfig() {
+    localStorage.removeItem('gameSimConfig');
+    alert('Saved config cleared!');
+}
+
 // ==================== THEME ====================
 function updateThemeBtn() {
     const isLight = document.body.classList.contains('light');
@@ -1649,6 +1727,7 @@ if (localStorage.getItem('theme') === 'light') document.body.classList.add('ligh
 updateThemeBtn();
 
 // ==================== INIT ====================
+loadSavedConfig(); // restore saved config if exists
 renderStakeTable();  // stake DOM must render first
 renderPriceTable();  // calls renderGoldPerDollarChart() at end, stake DOM is ready
 rebuildScenarios(); // init win/lose scenario inputs
