@@ -1453,9 +1453,8 @@ function importExcelFile(file) {
         try {
         const data = new Uint8Array(e.target.result);
         const wb = XLSX.read(data, { type: 'array' });
-        // Clear all config before import
-        defaultPriceGold.length = 0;
-        defaultStakes.length = 0;
+        let foundPrice = false, foundStake = false;
+        const newPrices = [], newStakes = [];
         let imported = false;
 
         // Parse all sheets — support both: separate sheets per section, or section markers on same sheet
@@ -1492,7 +1491,7 @@ function importExcelFile(file) {
                         if (pi >= 0 && gi >= 0) {
                             const p = parseFloat(String(r[pi]).replace(/[^0-9.\-eE+]/g, ''));
                             const g = parseFloat(String(r[gi]).replace(/[^0-9.\-eE+]/g, ''));
-                            if (g > 0) { defaultPriceGold.push({ price: p || 0, gold: g }); imported = true; }
+                            if (g > 0) { newPrices.push({ price: p || 0, gold: g }); foundPrice = true; imported = true; }
                         }
                     } else if (currentSection === 'STAKE_BUYIN') {
                         const si = sectionHeader.findIndex(h => h.includes('stake'));
@@ -1502,7 +1501,7 @@ function importExcelFile(file) {
                             const s = parseFloat(String(r[si]).replace(/[^0-9.\-eE+]/g, ''));
                             const mn = parseFloat(String(r[mni]).replace(/[^0-9.\-eE+]/g, ''));
                             const mx = parseFloat(String(r[mxi]).replace(/[^0-9.\-eE+]/g, ''));
-                            if (s > 0) { defaultStakes.push({ stake: s, buyinMin: mn, buyinMax: mx }); imported = true; }
+                            if (s > 0) { newStakes.push({ stake: s, buyinMin: mn, buyinMax: mx }); foundStake = true; imported = true; }
                         }
                     }
                 });
@@ -1515,7 +1514,7 @@ function importExcelFile(file) {
                     for (let i = 1; i < rows.length; i++) {
                         const p = parseFloat(String(rows[i][priceIdx]).replace(/[^0-9.\-eE+]/g, ''));
                         const g = parseFloat(String(rows[i][goldIdx]).replace(/[^0-9.\-eE+]/g, ''));
-                        if (g > 0) defaultPriceGold.push({ price: p || 0, gold: g });
+                        if (g > 0) newPrices.push({ price: p || 0, gold: g }); foundPrice = true;
                     }
                     imported = true;
                 }
@@ -1528,7 +1527,7 @@ function importExcelFile(file) {
                             const s = parseFloat(String(rows[i][sIdx]).replace(/[^0-9.\-eE+]/g, ''));
                             const mn = parseFloat(String(rows[i][minIdx]).replace(/[^0-9.\-eE+]/g, ''));
                             const mx = parseFloat(String(rows[i][maxIdx]).replace(/[^0-9.\-eE+]/g, ''));
-                            if (s > 0) defaultStakes.push({ stake: s, buyinMin: mn, buyinMax: mx });
+                            if (s > 0) { newStakes.push({ stake: s, buyinMin: mn, buyinMax: mx }); foundStake = true; }
                         }
                         imported = true;
                     }
@@ -1537,6 +1536,8 @@ function importExcelFile(file) {
         });
 
         if (imported) {
+            if (foundPrice) { defaultPriceGold.length = 0; newPrices.forEach(p => defaultPriceGold.push(p)); }
+            if (foundStake) { defaultStakes.length = 0; newStakes.forEach(s => defaultStakes.push(s)); }
             renderPriceTable();
             renderStakeTable();
             validateConfig();
@@ -1560,15 +1561,12 @@ function importAllCSV(file) {
     const reader = new FileReader();
     reader.onload = function(e) {
         const text = e.target.result;
-        // Clear all config before import
-        defaultPriceGold.length = 0;
-        defaultStakes.length = 0;
         // Split by sections — handle Excel trailing commas: [PRICE_GOLD],,
         const sections = {};
         let currentSection = null;
         let sectionLines = [];
         text.split('\n').forEach(line => {
-            const trimmed = line.trim().replace(/,+$/g, '').trim(); // strip trailing commas + spaces
+            const trimmed = line.trim().replace(/,+$/g, '').trim();
             if (trimmed.match(/^\[.+\]$/)) {
                 if (currentSection) sections[currentSection] = sectionLines.join('\n');
                 currentSection = trimmed.replace(/[\[\]]/g, '').trim();
@@ -1580,25 +1578,28 @@ function importAllCSV(file) {
         if (currentSection) sections[currentSection] = sectionLines.join('\n');
 
         let imported = false;
+        let foundPrice = false, foundStake = false;
 
         // Parse PRICE_GOLD
         if (sections['PRICE_GOLD']) {
             const rows = parseCSVSection(sections['PRICE_GOLD']);
             if (rows.length > 0) {
+                defaultPriceGold.length = 0;
                 rows.forEach(r => {
                     if (r.length >= 2 && r[1] > 0) defaultPriceGold.push({ price: r[0], gold: r[1] });
                 });
-                imported = true;
+                foundPrice = true; imported = true;
             }
         }
         // Parse STAKE_BUYIN
         if (sections['STAKE_BUYIN']) {
             const rows = parseCSVSection(sections['STAKE_BUYIN']);
             if (rows.length > 0) {
+                defaultStakes.length = 0;
                 rows.forEach(r => {
                     if (r.length >= 3 && r[0] > 0) defaultStakes.push({ stake: r[0], buyinMin: r[1], buyinMax: r[2] });
                 });
-                imported = true;
+                foundStake = true; imported = true;
             }
         }
 
