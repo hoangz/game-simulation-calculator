@@ -457,27 +457,29 @@ function validateConfig() {
     const warnDiv = document.getElementById('configWarnings');
     if (!warnDiv) return;
 
-    const warnings = [];
+    const sColorMap = buildAllStakeColorMap();
 
-    // Check stakes with no matching gold
-    stakes.forEach(s => {
-        const hasGold = priceGold.some(p => p.gold >= s.buyinMin && p.gold <= s.buyinMax);
-        if (!hasGold) {
-            warnings.push(`<span class="warn-tag stake-unused">⚠ Stake ${fmtNum(s.stake)} (${fmtNum(s.buyinMin)}~${fmtNum(s.buyinMax)}) — khong co goi gold nao</span>`);
-        }
-    });
+    // Stakes with no matching gold
+    const unusedStakes = stakes.filter(s => !priceGold.some(p => p.gold >= s.buyinMin && p.gold <= s.buyinMax));
+    // Gold with no matching stake
+    const unmatchedGold = priceGold.filter(p => !stakes.some(s => p.gold >= s.buyinMin && p.gold <= s.buyinMax));
 
-    // Check gold with no matching stake
-    priceGold.forEach(p => {
-        const matched = stakes.some(s => p.gold >= s.buyinMin && p.gold <= s.buyinMax);
-        if (!matched) {
-            warnings.push(`<span class="warn-tag gold-nomatch">⚠ $${p.price} (${fmtNum(p.gold)} gold) — khong match stake nao</span>`);
-        }
-    });
+    const parts = [];
+    if (unusedStakes.length > 0) {
+        const list = unusedStakes.map(s => {
+            const c = sColorMap[s.stake] || '#ffb74d';
+            return `<span style="color:${c};font-weight:700;">${fmtNum(s.stake)}</span>`;
+        }).join(', ');
+        parts.push(`<span class="warn-tag stake-unused">⚠ Khong co goi gold: ${list}</span>`);
+    }
+    if (unmatchedGold.length > 0) {
+        const list = unmatchedGold.map(p => `<span style="font-weight:700;">$${p.price}</span>`).join(', ');
+        parts.push(`<span class="warn-tag gold-nomatch">⚠ Khong match stake: ${list}</span>`);
+    }
 
-    if (warnings.length > 0) {
+    if (parts.length > 0) {
         warnDiv.style.display = 'flex';
-        warnDiv.innerHTML = warnings.join('');
+        warnDiv.innerHTML = parts.join('');
     } else {
         warnDiv.style.display = 'none';
         warnDiv.innerHTML = '';
@@ -837,6 +839,12 @@ function buildStakeColorMap(results) {
     const uniqueStakes = [...new Set(results.filter(r => r.stake).map(r => r.stake))];
     const map = {};
     uniqueStakes.forEach((s, i) => { map[s] = stakeColors[i % stakeColors.length]; });
+    return map;
+}
+function buildAllStakeColorMap() {
+    const stakes = readStakeConfig().map(s => s.stake).filter(s => s > 0);
+    const map = {};
+    stakes.forEach((s, i) => { map[s] = stakeColors[i % stakeColors.length]; });
     return map;
 }
 
