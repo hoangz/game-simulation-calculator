@@ -253,14 +253,15 @@
         </div>
 
         <!-- Scenarios + Pot inline -->
-        <div class="config-subsection" style="display:flex;gap:24px;flex-wrap:wrap;align-items:flex-start;">
-            <div style="flex:1;min-width:200px;">
+        <div class="config-subsection" style="display:flex;gap:30px;flex-wrap:wrap;align-items:flex-start;">
+            <div>
                 <div class="config-subsection-label">Win/Lose Scenarios</div>
                 <div id="scenariosBody" class="scenario-row"></div>
                 <div id="scenarioWarning" class="scenario-warning"></div>
                 <div class="winrate-display">WinRate: <strong id="winRateDisplay">25%</strong></div>
             </div>
-            <div style="min-width:200px;">
+            <div class="config-divider" style="height:auto;align-self:stretch;"></div>
+            <div>
                 <label class="toggle-label">
                     <input type="checkbox" id="potEnabled" onchange="togglePotConfig()">
                     <span class="config-subsection-label" style="margin:0;">Pot System</span>
