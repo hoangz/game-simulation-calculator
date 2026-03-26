@@ -1100,8 +1100,8 @@ function runSimulation() {
 
 // ==================== STAKE COLOR MAP ====================
 const stakeColors = [
-    '#4fc3f7', '#ffa726', '#66bb6a', '#ce93d8', '#ef5350',
-    '#ffee58', '#26c6da', '#ff7043', '#9ccc65', '#ab47bc'
+    '#4fc3f7', '#ffa726', '#4fc3f7', '#ffa726', '#4fc3f7',
+    '#ffa726', '#4fc3f7', '#ffa726', '#4fc3f7', '#ffa726'
 ];
 function buildStakeColorMap(results) {
     const uniqueStakes = [...new Set(results.filter(r => r.stake).map(r => r.stake))];
