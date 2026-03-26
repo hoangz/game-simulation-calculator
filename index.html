@@ -108,7 +108,7 @@
             transition: background 0.2s;
         }
         button:hover { background: #1565c0; }
-        button:disabled { background: #37474f; cursor: not-allowed; }
+        button:disabled { background: #37474f; cursor: not-allowed; opacity: 0.4; }
         button.green { background: #2e7d32; }
         button.green:hover { background: #1b5e20; }
         button.small {
@@ -1274,15 +1274,39 @@ function updateChart() {
 // ==================== CSV EXPORT ====================
 function downloadCSV() {
     if (simulationResults.length === 0) return;
-    let csv = 'Price,Gold,Stake,Multiplier,WinGold,LoseGold,AvgGames,MedianGames,P10,P25,P75,P90,Min,Max,AvgFinalGold,BankruptRate,AvgBurnRate,MaxTurnRate\n';
+
+    // Section 1: Summary
+    let csv = '[SUMMARY]\n';
+    csv += 'Price,Gold,Stake,Multiplier,WinGold,LoseGold,AvgGames,MedianGames,AvgBurnRate,AvgFinalGold,BankruptRate,HitMaxRate\n';
     simulationResults.forEach(r => {
-        csv += `${r.price},${r.gold},${r.stake||''},${r.multiplier||''},${Math.round(r.winGold)},${Math.round(r.loseGold)},${r.avgGames},${r.medianGames},${r.p10Games},${r.p25Games},${r.p75Games},${r.p90Games},${r.minGames},${r.maxGames},${r.avgFinalGold},${r.bankruptRate},${r.avgBurnRate},${r.maxTurnRate}\n`;
+        csv += `${r.price},${r.gold},${r.stake||''},${r.multiplier||''},${Math.round(r.winGold)},${Math.round(r.loseGold)},${r.avgGames},${r.medianGames},${r.avgBurnRate},${r.avgFinalGold},${r.bankruptRate},${r.maxTurnRate}\n`;
     });
-    const blob = new Blob([csv], { type: 'text/csv' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url; a.download = 'gold_package_simulation.csv'; a.click();
-    URL.revokeObjectURL(url);
+
+    // Section 2: Detail by Percentile
+    csv += '\n[DETAIL_PERCENTILE]\n';
+    csv += 'Price,Stake,Min,P10,P25,Median,P75,P90,Max,Avg,MaxoutMin,MaxoutAvg\n';
+    simulationResults.forEach(r => {
+        if (!r.stake) return;
+        csv += `${r.price},${r.stake},${r.minGames},${r.p10Games},${r.p25Games},${r.medianGames},${r.p75Games},${r.p90Games},${r.maxGames},${r.avgGames},${r.maxoutMin != null ? r.maxoutMin : ''},${r.maxoutAvg != null ? r.maxoutAvg : ''}\n`;
+    });
+
+    // Section 3: Config used
+    csv += '\n[CONFIG]\n';
+    csv += `WinRate,${document.getElementById('winRateDisplay').textContent}\n`;
+    csv += `WinPts,${document.getElementById('winpts').value}\n`;
+    csv += `LosePts,${document.getElementById('losepts').value}\n`;
+    csv += `TaxRate,${document.getElementById('taxRate').value}\n`;
+    csv += `Players,${document.getElementById('numPlayers').value}\n`;
+    csv += `MaxTurns,${document.getElementById('maxTurns').value}\n`;
+    const potOn = document.getElementById('potEnabled').checked;
+    csv += `PotEnabled,${potOn}\n`;
+    if (potOn) {
+        csv += `PotMultiplier,${document.getElementById('potMultiplier').value}\n`;
+        csv += `PotTax,${document.getElementById('potTax').value}\n`;
+        csv += `PotWinStreak,${document.getElementById('potWinStreak').value}\n`;
+    }
+
+    triggerDownload(csv, 'simulation_results.csv');
 }
 
 // ==================== IMPORT / EXPORT CONFIG CSV ====================
