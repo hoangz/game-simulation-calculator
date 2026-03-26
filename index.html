@@ -1130,39 +1130,80 @@ function importExcelFile(file) {
         defaultStakes.length = 0;
         let imported = false;
 
-        // Look for sheets containing price/gold data or stake/buyin data
+        // Parse all sheets — support both: separate sheets per section, or section markers on same sheet
         wb.SheetNames.forEach(name => {
             const sheet = wb.Sheets[name];
             const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
             if (rows.length < 2) return;
 
-            const header = rows[0].map(h => String(h).toLowerCase().trim());
+            // Check if sheet has section markers like [PRICE_GOLD]
+            const hasSectionMarkers = rows.some(r => String(r[0]).trim().match(/^\[.+\]$/));
 
-            // Detect price/gold sheet
-            if (header.some(h => h.includes('price')) && header.some(h => h.includes('gold'))) {
-                const priceIdx = header.findIndex(h => h.includes('price'));
-                const goldIdx = header.findIndex(h => h.includes('gold'));
-                for (let i = 1; i < rows.length; i++) {
-                    const p = parseFloat(String(rows[i][priceIdx]).replace(/[^0-9.\-eE+]/g, ''));
-                    const g = parseFloat(String(rows[i][goldIdx]).replace(/[^0-9.\-eE+]/g, ''));
-                    if (g > 0) defaultPriceGold.push({ price: p || 0, gold: g });
-                }
-                imported = true;
-            }
+            if (hasSectionMarkers) {
+                // Parse sections within same sheet
+                let currentSection = null;
+                let sectionHeader = null;
+                rows.forEach(r => {
+                    const cell0 = String(r[0]).trim();
+                    if (cell0.match(/^\[.+\]$/)) {
+                        currentSection = cell0.replace(/[\[\]]/g, '').toUpperCase();
+                        sectionHeader = null;
+                        return;
+                    }
+                    if (!currentSection) return;
+                    const headerCheck = cell0.toLowerCase();
+                    if (!sectionHeader && (headerCheck.includes('price') || headerCheck.includes('stake'))) {
+                        sectionHeader = r.map(h => String(h).toLowerCase().trim());
+                        return;
+                    }
+                    if (!sectionHeader) return;
 
-            // Detect stake/buyin sheet
-            if (header.some(h => h.includes('stake')) && header.some(h => h.includes('buy'))) {
-                const sIdx = header.findIndex(h => h.includes('stake'));
-                const minIdx = header.findIndex(h => h.includes('min'));
-                const maxIdx = header.findIndex(h => h.includes('max'));
-                if (minIdx >= 0 && maxIdx >= 0) {
+                    if (currentSection === 'PRICE_GOLD') {
+                        const pi = sectionHeader.findIndex(h => h.includes('price'));
+                        const gi = sectionHeader.findIndex(h => h.includes('gold'));
+                        if (pi >= 0 && gi >= 0) {
+                            const p = parseFloat(String(r[pi]).replace(/[^0-9.\-eE+]/g, ''));
+                            const g = parseFloat(String(r[gi]).replace(/[^0-9.\-eE+]/g, ''));
+                            if (g > 0) { defaultPriceGold.push({ price: p || 0, gold: g }); imported = true; }
+                        }
+                    } else if (currentSection === 'STAKE_BUYIN') {
+                        const si = sectionHeader.findIndex(h => h.includes('stake'));
+                        const mni = sectionHeader.findIndex(h => h.includes('min'));
+                        const mxi = sectionHeader.findIndex(h => h.includes('max'));
+                        if (si >= 0 && mni >= 0 && mxi >= 0) {
+                            const s = parseFloat(String(r[si]).replace(/[^0-9.\-eE+]/g, ''));
+                            const mn = parseFloat(String(r[mni]).replace(/[^0-9.\-eE+]/g, ''));
+                            const mx = parseFloat(String(r[mxi]).replace(/[^0-9.\-eE+]/g, ''));
+                            if (s > 0) { defaultStakes.push({ stake: s, buyinMin: mn, buyinMax: mx }); imported = true; }
+                        }
+                    }
+                });
+            } else {
+                // Original: header-based detection (separate sheets)
+                const header = rows[0].map(h => String(h).toLowerCase().trim());
+                if (header.some(h => h.includes('price')) && header.some(h => h.includes('gold'))) {
+                    const priceIdx = header.findIndex(h => h.includes('price'));
+                    const goldIdx = header.findIndex(h => h.includes('gold'));
                     for (let i = 1; i < rows.length; i++) {
-                        const s = parseFloat(String(rows[i][sIdx]).replace(/[^0-9.\-eE+]/g, ''));
-                        const mn = parseFloat(String(rows[i][minIdx]).replace(/[^0-9.\-eE+]/g, ''));
-                        const mx = parseFloat(String(rows[i][maxIdx]).replace(/[^0-9.\-eE+]/g, ''));
-                        if (s > 0) defaultStakes.push({ stake: s, buyinMin: mn, buyinMax: mx });
+                        const p = parseFloat(String(rows[i][priceIdx]).replace(/[^0-9.\-eE+]/g, ''));
+                        const g = parseFloat(String(rows[i][goldIdx]).replace(/[^0-9.\-eE+]/g, ''));
+                        if (g > 0) defaultPriceGold.push({ price: p || 0, gold: g });
                     }
                     imported = true;
+                }
+                if (header.some(h => h.includes('stake')) && header.some(h => h.includes('buy'))) {
+                    const sIdx = header.findIndex(h => h.includes('stake'));
+                    const minIdx = header.findIndex(h => h.includes('min'));
+                    const maxIdx = header.findIndex(h => h.includes('max'));
+                    if (minIdx >= 0 && maxIdx >= 0) {
+                        for (let i = 1; i < rows.length; i++) {
+                            const s = parseFloat(String(rows[i][sIdx]).replace(/[^0-9.\-eE+]/g, ''));
+                            const mn = parseFloat(String(rows[i][minIdx]).replace(/[^0-9.\-eE+]/g, ''));
+                            const mx = parseFloat(String(rows[i][maxIdx]).replace(/[^0-9.\-eE+]/g, ''));
+                            if (s > 0) defaultStakes.push({ stake: s, buyinMin: mn, buyinMax: mx });
+                        }
+                        imported = true;
+                    }
                 }
             }
         });
