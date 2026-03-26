@@ -440,7 +440,7 @@ function removePriceRow(idx) {
 // ==================== GOLD PER DOLLAR CHART ====================
 let goldPerDollarChart = null;
 function renderGoldPerDollarChart() {
-    const data = defaultPriceGold.filter(p => p.price > 0 && p.gold > 0);
+    const data = readPriceGold();
     if (data.length === 0) return;
 
     function shortNum(n) {
@@ -609,10 +609,12 @@ function renderGoldPerDollarChart() {
 function addStakeRow() {
     defaultStakes.push({ stake: 0, buyinMin: 0, buyinMax: 0 });
     renderStakeTable();
+    renderGoldPerDollarChart();
 }
 function removeStakeRow(idx) {
     defaultStakes.splice(idx, 1);
     renderStakeTable();
+    renderGoldPerDollarChart();
 }
 
 // Read current values from inputs
