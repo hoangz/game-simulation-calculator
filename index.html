@@ -217,7 +217,7 @@
         <div class="config-table-wrap">
             <h3>Price &rarr; Gold Config</h3>
             <table id="priceTable">
-                <thead><tr><th>Price ($)</th><th>Gold</th><th>Gold/$</th><th></th></tr></thead>
+                <thead><tr><th>Price ($)</th><th>Gold</th><th>Gold/$</th><th>Stake</th><th>Min</th><th>Avg</th><th></th></tr></thead>
                 <tbody id="priceBody"></tbody>
             </table>
             <div class="table-actions">
@@ -403,14 +403,36 @@ function scheduleHighlightClear() {
 function renderPriceTable() {
     const tbody = document.getElementById('priceBody');
     tbody.innerHTML = '';
+    const stakeConfig = readStakeConfig();
+    const sColorMap = buildAllStakeColorMap();
+
+    function shortNum(n) {
+        if (n >= 1e9) return (n / 1e9).toFixed(1) + 'B';
+        if (n >= 1e6) return (n / 1e6).toFixed(1) + 'M';
+        if (n >= 1e3) return (n / 1e3).toFixed(0) + 'K';
+        return n.toString();
+    }
+
     defaultPriceGold.forEach((p, i) => {
         const goldPerDollar = p.price > 0 ? fmtNum(Math.round(p.gold / p.price)) : '—';
         const sPrice = changedStyle(priceSnapshot, i, 'price', p.price);
         const sGold = changedStyle(priceSnapshot, i, 'gold', p.gold);
+        const stake = findStake(p.gold, stakeConfig);
+        const stakeColor = (stake && sColorMap[stake]) ? sColorMap[stake] : '#666';
+        const stakeText = stake ? shortNum(stake) : '—';
+
+        // Get sim results if available
+        const sr = simulationResults.find(r => r.price === p.price && r.stake);
+        const minG = sr ? sr.minGames : '—';
+        const avgG = sr ? sr.avgGames : '—';
+
         tbody.innerHTML += `<tr>
             <td><input type="text" data-price-idx="${i}" data-field="price" value="${fmtNum(p.price)}" style="${sPrice}"></td>
             <td><input type="text" data-price-idx="${i}" data-field="gold" value="${fmtNum(p.gold)}" style="${sGold}"></td>
             <td style="color:#4fc3f7;font-weight:600;text-align:right;padding-right:8px;">${goldPerDollar}</td>
+            <td style="color:${stakeColor};font-weight:700;text-align:right;padding-right:8px;">${stakeText}</td>
+            <td style="color:#ef5350;font-weight:600;text-align:center;">${minG}</td>
+            <td style="color:#ffd54f;font-weight:600;text-align:center;">${avgG}</td>
             <td><button class="small danger" onclick="removePriceRow(${i})">X</button></td>
         </tr>`;
     });
@@ -916,7 +938,7 @@ function renderResults() {
 
     // ==================== RENDER CHARTS ====================
     renderChart();
-    renderGoldPerDollarChart(); // update with game lines
+    renderPriceTable(); // update min/avg columns + gold/$ chart
 }
 
 let gamesChart = null;
