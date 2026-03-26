@@ -1442,10 +1442,15 @@ function importConfigFile(event) {
 }
 
 function importExcelFile(file) {
+    if (typeof XLSX === 'undefined') {
+        alert('XLSX library not loaded. Try opening the file via a web server (Live Server) or use CSV format instead.');
+        return;
+    }
     takePriceSnapshot();
     takeStakeSnapshot();
     const reader = new FileReader();
     reader.onload = function(e) {
+        try {
         const data = new Uint8Array(e.target.result);
         const wb = XLSX.read(data, { type: 'array' });
         // Clear all config before import
@@ -1539,6 +1544,10 @@ function importExcelFile(file) {
         } else {
             priceSnapshot = null; stakeSnapshot = null;
             alert('No sheet found with price/gold or stake/buyin_min/buyin_max headers.');
+        }
+        } catch(err) {
+            console.error('Excel import error:', err);
+            alert('Import Excel error: ' + err.message);
         }
     };
     reader.readAsArrayBuffer(file);
