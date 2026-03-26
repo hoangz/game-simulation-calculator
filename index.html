@@ -384,15 +384,13 @@ const defaultPriceGold = [
 ];
 
 const defaultStakes = [
-    { stake: 40000,      buyinMin: 200000,       buyinMax: 2000000 },
-    { stake: 200000,     buyinMin: 1600000,      buyinMax: 11000000 },
-    { stake: 1000000,    buyinMin: 8000000,      buyinMax: 60000000 },
-    { stake: 2000000,    buyinMin: 16000000,     buyinMax: 195000000 },
-    { stake: 5000000,    buyinMin: 40000000,     buyinMax: 350000000 },
-    { stake: 10000000,   buyinMin: 80000000,     buyinMax: 750000000 },
-    { stake: 20000000,   buyinMin: 160000000,    buyinMax: 1600000000 },
-    { stake: 50000000,   buyinMin: 400000000,    buyinMax: 4250000000 },
-    { stake: 100000000,  buyinMin: 800000000,    buyinMax: 1000000000000 },
+    { stake: 50000,      buyinMin: 200000,       buyinMax: 2000000 },
+    { stake: 110000,     buyinMin: 2000000,      buyinMax: 6000000 },
+    { stake: 150000,     buyinMin: 6000000,      buyinMax: 10000000 },
+    { stake: 250000,     buyinMin: 10000000,     buyinMax: 20000000 },
+    { stake: 500000,     buyinMin: 20000000,     buyinMax: 50000000 },
+    { stake: 1500000,    buyinMin: 50000000,     buyinMax: 250000000 },
+    { stake: 5500000,    buyinMin: 250000000,    buyinMax: 1000000000000 },
 ];
 
 let simulationResults = [];
@@ -1524,10 +1522,10 @@ function importAllCSV(file) {
         let currentSection = null;
         let sectionLines = [];
         text.split('\n').forEach(line => {
-            const trimmed = line.trim().replace(/,+$/g, ''); // strip trailing commas
+            const trimmed = line.trim().replace(/,+$/g, '').trim(); // strip trailing commas + spaces
             if (trimmed.match(/^\[.+\]$/)) {
                 if (currentSection) sections[currentSection] = sectionLines.join('\n');
-                currentSection = trimmed.replace(/[\[\]]/g, '');
+                currentSection = trimmed.replace(/[\[\]]/g, '').trim();
                 sectionLines = [];
             } else if (trimmed.length > 0) {
                 sectionLines.push(line);
