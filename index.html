@@ -61,20 +61,42 @@
         body.light h2 { color: #1e40af; }
         body.light h3 { color: #1e3a8a; }
 
-        /* Config Panel */
+        /* Config Sections */
+        .config-section {
+            background: var(--bg2); border: 1px solid var(--border);
+            border-radius: 8px; padding: 16px 20px; margin-bottom: 10px;
+        }
+        .config-section-header {
+            color: var(--accent); font-size: 13px; font-weight: 700;
+            text-transform: uppercase; letter-spacing: 0.5px;
+            margin-bottom: 12px; padding-bottom: 6px;
+            border-bottom: 1px solid var(--border);
+        }
+        .config-grid {
+            display: flex; flex-wrap: wrap; gap: 14px; align-items: flex-start;
+        }
+        .config-subsection {
+            margin-top: 12px; padding-top: 10px; border-top: 1px dashed var(--border);
+        }
+        .config-subsection-label {
+            color: var(--accent2); font-size: 12px; font-weight: 700;
+            text-transform: uppercase; letter-spacing: 0.3px; margin-bottom: 8px;
+        }
+        .winrate-display {
+            margin-top: 6px; font-size: 12px; color: var(--text2);
+        }
+        .pot-note {
+            font-size: 11px; color: var(--text2); margin-top: 8px;
+            padding: 6px 10px; background: var(--bg3); border-radius: 4px;
+            border-left: 3px solid var(--accent); line-height: 1.6;
+        }
         .config-panel {
-            background: var(--bg2);
-            border: 1px solid var(--border);
-            border-radius: 8px;
-            padding: 20px;
-            margin-bottom: 20px;
-            display: flex;
-            flex-wrap: wrap;
-            gap: 15px;
-            align-items: flex-end;
+            background: var(--bg2); border: 1px solid var(--border);
+            border-radius: 8px; padding: 20px; margin-bottom: 20px;
+            display: flex; flex-wrap: wrap; gap: 15px; align-items: flex-end;
         }
         .config-item { display: flex; flex-direction: column; gap: 4px; }
-        .config-item label { color: var(--accent2); font-weight: 600; font-size: 13px; }
+        .config-item label { color: var(--accent2); font-weight: 600; font-size: 12px; }
         .config-item input {
             background: var(--bg3); border: 1px solid var(--border); color: var(--text);
             padding: 6px 10px; border-radius: 4px; width: 100px; font-size: 13px;
@@ -152,13 +174,6 @@
             display: flex; align-items: center; gap: 4px;
         }
         .chart-controls input[type="checkbox"] { accent-color: var(--accent); cursor: pointer; }
-        .sub-config-panel {
-            display: flex; gap: 20px; align-items: flex-start; flex-wrap: wrap;
-            background: var(--bg2); border: 1px solid var(--border); border-radius: 8px;
-            padding: 14px 18px; margin-top: 8px;
-        }
-        .sub-config-section h4 { color: var(--accent); font-size: 13px; margin-bottom: 8px; }
-        .sub-config-divider { width: 1px; background: var(--border); align-self: stretch; }
         .scenario-row { display: flex; gap: 8px; flex-wrap: wrap; }
         .scenario-item {
             background: var(--bg3); border: 1px solid var(--border); border-radius: 6px;
@@ -172,15 +187,9 @@
         .scenario-item .pct { font-size: 12px; color: var(--text2); }
         .scenario-warning { color: #ef5350; font-size: 11px; margin-top: 4px; display: none; }
         .toggle-label { display: flex; align-items: center; gap: 6px; cursor: pointer; }
-        .toggle-label input[type="checkbox"] { accent-color: var(--accent); width: 16px; height: 16px; cursor: pointer; }
-        .pot-config-fields { display: flex; gap: 12px; flex-wrap: wrap; }
-        .config-item-sm { display: flex; flex-direction: column; gap: 2px; }
-        .config-item-sm label { font-size: 11px; color: var(--text2); }
-        .config-item-sm input {
-            width: 60px; text-align: center; background: var(--bg); border: 1px solid var(--border);
-            color: var(--text); border-radius: 4px; padding: 4px; font-size: 13px;
-        }
+        .toggle-label input[type="checkbox"] { accent-color: var(--accent); width: 15px; height: 15px; cursor: pointer; }
         .config-hint { font-size: 10px; color: var(--text2); }
+        .config-divider { width: 1px; height: 36px; background: var(--border); align-self: center; }
 
         #configWarnings { margin: 10px 0; display: flex; flex-wrap: wrap; gap: 8px; }
         .warn-tag {
@@ -191,6 +200,10 @@
         .warn-tag.gold-nomatch { background: #ef535020; border: 1px solid #ef535060; color: #ef9a9a; }
         body.light .warn-tag.stake-unused { background: #fff3e0; border-color: #ffb74d; color: #e65100; }
         body.light .warn-tag.gold-nomatch { background: #ffebee; border-color: #ef5350; color: #c62828; }
+
+        /* Price table Min/Avg columns */
+        #priceTable th:nth-child(5), #priceTable td:nth-child(5) { min-width: 50px; text-align: center; }
+        #priceTable th:nth-child(6), #priceTable td:nth-child(6) { min-width: 55px; text-align: center; }
 
         /* Result section */
         .result-wrap {
@@ -204,77 +217,76 @@
 <div class="container">
     <h2>Gold Package - Game Simulation Calculator</h2>
 
-    <!-- Simulation Params -->
-    <div class="config-panel">
-        <div class="config-item">
-            <label>Win Pts</label>
-            <input type="number" id="winpts" value="13.7" step="0.1">
-        </div>
-        <div class="config-item">
-            <label>Lose Pts</label>
-            <input type="number" id="losepts" value="6.85" step="0.1">
-        </div>
-        <div class="config-item">
-            <label>Tax Rate</label>
-            <input type="number" id="taxRate" value="0.1" step="0.01" min="0" max="1">
-        </div>
-        <div class="config-item">
-            <label>Players/Table</label>
-            <input type="number" id="playersPerTable" value="4" min="2" max="10" onchange="rebuildScenarios()">
-        </div>
-        <div class="config-item">
-            <label>Simulations</label>
-            <input type="number" id="numPlayers" value="2000" min="100" max="10000">
-        </div>
-        <div class="config-item">
-            <label>Max Turns</label>
-            <input type="number" id="maxTurns" value="500" min="50" max="5000">
-        </div>
-        <div style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap;">
-            <button onclick="runSimulation()" id="btnRun">Chay Simulation</button>
-            <button onclick="downloadCSV()" class="green" id="btnCSV" disabled>Tai Result CSV</button>
+    <!-- All Config in One Section -->
+    <div class="config-section">
+        <div class="config-grid" style="align-items:flex-end;">
+            <div class="config-item">
+                <label>Win Pts</label>
+                <input type="number" id="winpts" value="13.7" step="0.1">
+            </div>
+            <div class="config-item">
+                <label>Lose Pts</label>
+                <input type="number" id="losepts" value="6.85" step="0.1">
+            </div>
+            <div class="config-item">
+                <label>Tax Rate</label>
+                <input type="number" id="taxRate" value="0.1" step="0.01" min="0" max="1">
+            </div>
+            <div class="config-item">
+                <label>Players/Table</label>
+                <input type="number" id="playersPerTable" value="4" min="2" max="10" onchange="rebuildScenarios()">
+            </div>
+            <div class="config-divider"></div>
+            <div class="config-item">
+                <label>Simulations</label>
+                <input type="number" id="numPlayers" value="2000" min="100" max="10000">
+            </div>
+            <div class="config-item">
+                <label>Max Turns</label>
+                <input type="number" id="maxTurns" value="500" min="50" max="5000">
+            </div>
+            <button onclick="runSimulation()" id="btnRun">Run Simulation</button>
+            <button onclick="downloadCSV()" class="green" id="btnCSV" disabled>Download Results</button>
             <button onclick="exportAllCSV()" class="orange">Export Config CSV</button>
             <button class="purple" onclick="document.getElementById('importAllFile').click()">Import Config</button>
             <input type="file" id="importAllFile" accept=".csv,.xlsx,.xls" onchange="importConfigFile(event)">
         </div>
-    </div>
 
-    <!-- Win Scenarios & Pot Config -->
-    <div class="sub-config-panel">
-        <div class="sub-config-section">
-            <h4>Win/Lose Scenarios</h4>
-            <div id="scenariosBody" class="scenario-row"></div>
-            <div id="scenarioWarning" class="scenario-warning"></div>
-            <div style="margin-top:4px;font-size:12px;color:var(--text2);">WinRate (auto): <strong id="winRateDisplay">25%</strong></div>
-        </div>
-        <div class="sub-config-divider"></div>
-        <div class="sub-config-section">
-            <h4>
+        <!-- Scenarios + Pot inline -->
+        <div class="config-subsection" style="display:flex;gap:24px;flex-wrap:wrap;align-items:flex-start;">
+            <div style="flex:1;min-width:200px;">
+                <div class="config-subsection-label">Win/Lose Scenarios</div>
+                <div id="scenariosBody" class="scenario-row"></div>
+                <div id="scenarioWarning" class="scenario-warning"></div>
+                <div class="winrate-display">WinRate: <strong id="winRateDisplay">25%</strong></div>
+            </div>
+            <div style="min-width:200px;">
                 <label class="toggle-label">
                     <input type="checkbox" id="potEnabled" onchange="togglePotConfig()">
-                    Pot System
+                    <span class="config-subsection-label" style="margin:0;">Pot System</span>
                 </label>
-            </h4>
-            <div id="potConfig" style="display:none;">
-                <div class="pot-config-fields">
-                    <div class="config-item-sm">
-                        <label>Pot/Turn</label>
-                        <input type="number" id="potMultiplier" value="1" min="1" max="10" step="1">
-                        <span class="config-hint">x stake</span>
+                <div id="potConfig" style="display:none;margin-top:8px;">
+                    <div class="config-grid">
+                        <div class="config-item">
+                            <label>Pot/Turn</label>
+                            <div style="display:flex;align-items:center;gap:4px;">
+                                <input type="number" id="potMultiplier" value="1" min="1" max="10" step="1" style="width:60px;">
+                                <span class="config-hint">x stake</span>
+                            </div>
+                        </div>
+                        <div class="config-item">
+                            <label>Pot Tax</label>
+                            <input type="number" id="potTax" value="0.1" min="0" max="1" step="0.01" style="width:60px;">
+                        </div>
+                        <div class="config-item">
+                            <label>Win Streak</label>
+                            <div style="display:flex;align-items:center;gap:4px;">
+                                <input type="number" id="potWinStreak" value="2" min="2" max="5" style="width:60px;">
+                                <span class="config-hint">consecutive</span>
+                            </div>
+                        </div>
                     </div>
-                    <div class="config-item-sm">
-                        <label>Pot Tax</label>
-                        <input type="number" id="potTax" value="0.1" min="0" max="1" step="0.01">
-                    </div>
-                    <div class="config-item-sm">
-                        <label>Win Streak</label>
-                        <input type="number" id="potWinStreak" value="2" min="2" max="5">
-                        <span class="config-hint">van lien tiep</span>
-                    </div>
-                </div>
-                <div style="font-size:11px;color:var(--text2);margin-top:6px;line-height:1.5;">
-                    Dau van: moi player gop <b>n x stake</b> vao pot.<br>
-                    Thang lien tiep <b>n van</b> &rarr; win toan bo pot (tru pot tax).
+                    <div class="pot-note">Each turn: all players contribute <b>n x stake</b> to pot. Win <b>n</b> consecutive &rarr; win pot (minus tax).</div>
                 </div>
             </div>
         </div>
@@ -292,7 +304,7 @@
                 <tbody id="priceBody"></tbody>
             </table>
             <div class="table-actions">
-                <button class="small green" onclick="addPriceRow()">+ Them dong</button>
+                <button class="small green" onclick="addPriceRow()">+ Add Row</button>
             </div>
         </div>
         <div class="config-table-wrap">
@@ -302,7 +314,7 @@
                 <tbody id="stakeBody"></tbody>
             </table>
             <div class="table-actions">
-                <button class="small green" onclick="addStakeRow()">+ Them dong</button>
+                <button class="small green" onclick="addStakeRow()">+ Add Row</button>
             </div>
         </div>
     </div>
@@ -312,7 +324,7 @@
 
     <!-- Gold/$ Chart -->
     <div class="result-wrap" id="goldPerDollarWrap">
-        <h3>Gold per Dollar theo muc gia</h3>
+        <h3>Gold per Dollar by Price Level</h3>
         <div class="chart-controls" id="gpdChartControls">
             <label><input type="checkbox" value="goldBar" checked onchange="renderGoldPerDollarChart()"> Gold/$ Bar</label>
             <label><input type="checkbox" value="goldTrend" checked onchange="renderGoldPerDollarChart()"> Gold/$ Trend</label>
@@ -326,7 +338,7 @@
 
     <!-- Chart -->
     <div class="result-wrap" id="chartWrap" style="display:none;">
-        <h3>Chart: So van choi theo Price</h3>
+        <h3>Chart: Games Played by Price</h3>
         <div class="chart-controls" id="chartControls">
             <label><input type="checkbox" value="min" checked onchange="updateChart()"> Min</label>
             <label><input type="checkbox" value="p10" onchange="updateChart()"> P10</label>
@@ -346,7 +358,7 @@
         <table id="resultTable"></table>
     </div>
     <div class="result-wrap" id="detailWrap" style="display:none;">
-        <h3>Chi tiet theo Percentile</h3>
+        <h3>Detail by Percentile</h3>
         <table id="detailTable"></table>
     </div>
 </div>
@@ -563,11 +575,11 @@ function validateConfig() {
             const c = sColorMap[s.stake] || '#ffb74d';
             return `<span style="color:${c};font-weight:700;">${fmtNum(s.stake)}</span>`;
         }).join(', ');
-        parts.push(`<span class="warn-tag stake-unused">⚠ Khong co goi gold: ${list}</span>`);
+        parts.push(`<span class="warn-tag stake-unused">⚠ No gold package for stakes: ${list}</span>`);
     }
     if (unmatchedGold.length > 0) {
         const list = unmatchedGold.map(p => `<span style="font-weight:700;">$${p.price}</span>`).join(', ');
-        parts.push(`<span class="warn-tag gold-nomatch">⚠ Khong match stake: ${list}</span>`);
+        parts.push(`<span class="warn-tag gold-nomatch">⚠ No matching stake: ${list}</span>`);
     }
 
     if (parts.length > 0) {
@@ -717,7 +729,7 @@ function renderGoldPerDollarChart() {
             position: 'right',
             ticks: { color: isLight ? '#92400e' : '#ffd54f', font: { size: 11 } },
             grid: { display: false },
-            title: { display: true, text: 'So van choi', color: isLight ? '#92400e' : '#ffd54f', font: { size: 12 } },
+            title: { display: true, text: 'Games Played', color: isLight ? '#92400e' : '#ffd54f', font: { size: 12 } },
             beginAtZero: true
         };
     }
@@ -739,7 +751,7 @@ function renderGoldPerDollarChart() {
                     callbacks: {
                         label: function(ctx) {
                             const v = ctx.parsed.y;
-                            if (ctx.dataset.yAxisID === 'y2') return ctx.dataset.label + ': ' + v + ' van';
+                            if (ctx.dataset.yAxisID === 'y2') return ctx.dataset.label + ': ' + v + ' games';
                             return ctx.dataset.label + ': ' + v.toLocaleString('de-DE');
                         }
                     }
@@ -854,7 +866,7 @@ function validateScenarios() {
     const warn = document.getElementById('scenarioWarning');
     if (Math.abs(total - 100) > 0.5) {
         warn.style.display = 'block';
-        warn.textContent = `Tong = ${total}% (can = 100%)`;
+        warn.textContent = `Total = ${total}% (must be 100%)`;
     } else {
         warn.style.display = 'none';
     }
@@ -883,7 +895,7 @@ function runSimulation() {
     // Build scenario cumulative distribution
     const scenarios = readScenarios();
     const totalPct = scenarios.reduce((s, sc) => s + sc.pct, 0);
-    if (Math.abs(totalPct - 100) > 0.5) { alert('Tong scenario phai = 100% (hien tai: ' + totalPct + '%)'); return; }
+    if (Math.abs(totalPct - 100) > 0.5) { alert('Total must be 100% (currently: ' + totalPct + '%)'); return; }
     const scenarioCDF = [];
     let cumul = 0;
     scenarios.forEach(sc => {
@@ -894,8 +906,8 @@ function runSimulation() {
     const priceGoldConfig = readPriceGold();
     const stakeConfig = readStakeConfig();
 
-    if (priceGoldConfig.length === 0) { alert('Chua co du lieu Price/Gold'); return; }
-    if (stakeConfig.length === 0) { alert('Chua co du lieu Stake'); return; }
+    if (priceGoldConfig.length === 0) { alert('No data for Price/Gold'); return; }
+    if (stakeConfig.length === 0) { alert('No data for Stake'); return; }
 
     const btnRun = document.getElementById('btnRun');
     const btnCSV = document.getElementById('btnCSV');
@@ -918,7 +930,7 @@ function runSimulation() {
             btnRun.disabled = false;
             btnCSV.disabled = false;
             progressFill.style.width = '100%';
-            status.textContent = 'Hoan tat! (' + total + ' price levels)';
+            status.textContent = 'Complete! (' + total + ' price levels)';
             return;
         }
 
@@ -1229,7 +1241,7 @@ function updateChart() {
                 y: {
                     ticks: { color: getComputedStyle(document.body).getPropertyValue('--text2').trim(), font: { size: 11 } },
                     grid: { display: false },
-                    title: { display: true, text: 'So van choi', color: getComputedStyle(document.body).getPropertyValue('--accent').trim(), font: { size: 12 } },
+                    title: { display: true, text: 'Games Played', color: getComputedStyle(document.body).getPropertyValue('--accent').trim(), font: { size: 12 } },
                     beginAtZero: true
                 }
             }
@@ -1412,7 +1424,7 @@ function importExcelFile(file) {
             scheduleHighlightClear();
         } else {
             priceSnapshot = null; stakeSnapshot = null;
-            alert('Khong tim thay sheet co header price/gold hoac stake/buyin_min/buyin_max.');
+            alert('No sheet found with price/gold or stake/buyin_min/buyin_max headers.');
         }
     };
     reader.readAsArrayBuffer(file);
@@ -1489,7 +1501,7 @@ function importAllCSV(file) {
             scheduleHighlightClear();
         } else {
             priceSnapshot = null; stakeSnapshot = null;
-            alert('CSV sai format. Can co [PRICE_GOLD] va/hoac [STAKE_BUYIN] section.');
+            alert('Invalid CSV format. Must have [PRICE_GOLD] and/or [STAKE_BUYIN] section.');
         }
     };
     reader.readAsText(file);
@@ -1513,8 +1525,8 @@ if (localStorage.getItem('theme') === 'light') document.body.classList.add('ligh
 updateThemeBtn();
 
 // ==================== INIT ====================
-renderStakeTable();  // stake DOM phải render trước
-renderPriceTable();  // gọi renderGoldPerDollarChart() ở cuối, lúc này stake DOM đã sẵn
+renderStakeTable();  // stake DOM must render first
+renderPriceTable();  // calls renderGoldPerDollarChart() at end, stake DOM is ready
 rebuildScenarios(); // init win/lose scenario inputs
 </script>
 </body>
