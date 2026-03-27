@@ -870,8 +870,9 @@
             <th>Buy-in Min</th>
             <th>Gold Min Cont</th>
             <th>Maxout</th>
-            <th>BuyIn/Stake</th>
-            <th>Maxout/Stake</th>
+            <th>BuyIn/S</th>
+            <th>Max/S</th>
+            <th>Prices</th>
             <th></th>
           </tr>
         </thead>
@@ -1253,10 +1254,26 @@
     const tbody = document.getElementById('stakeBody');
     if (!tbody) return;
 
+    // Build price→stake mapping
+    const stakeConfig = defaultStakes.slice().sort((a, b) => a.stake - b.stake);
+    const stakePriceMap = {};
+    defaultPriceGold.forEach(p => {
+      const matched = findStake(p.gold, stakeConfig);
+      if (matched) {
+        if (!stakePriceMap[matched.stake]) stakePriceMap[matched.stake] = [];
+        stakePriceMap[matched.stake].push('$' + p.price);
+      }
+    });
+    const sColorMap = buildAllStakeColorMap();
+
     tbody.innerHTML = '';
     defaultStakes.forEach((row, i) => {
       const buyInRatio = row.stake > 0 ? Math.round(row.buyInMin / row.stake) : 0;
       const maxoutRatio = row.stake > 0 ? Math.round(row.maxout / row.stake) : 0;
+      const prices = stakePriceMap[row.stake] || [];
+      const pricesHtml = prices.length > 0
+        ? `<span style="color:${sColorMap[row.stake] || 'var(--text2)'};font-weight:600;font-size:12px;">${prices.join(', ')}</span>`
+        : `<span style="color:var(--red);font-size:11px;">—</span>`;
 
       const stakeHighlight = changedStyle(_stakeSnapshot, i, 'stake', row.stake);
       const buyInHighlight = changedStyle(_stakeSnapshot, i, 'buyInMin', row.buyInMin);
@@ -1287,6 +1304,7 @@
         <td style="color:var(--text2);text-align:right;">
           ${maxoutRatio > 0 ? maxoutRatio + 'x' : '—'}
         </td>
+        <td style="text-align:center;">${pricesHtml}</td>
         <td>
           <button class="small danger" onclick="removeStakeRow(${i})">✕</button>
         </td>
