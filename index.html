@@ -932,13 +932,13 @@
   <div class="result-wrap" id="goldPerDollarWrap">
     <h3>Gold per Dollar</h3>
     <div class="chart-controls" id="gpdChartControls"></div>
-    <canvas id="goldPerDollarChart" height="94"></canvas>
+    <canvas id="goldPerDollarChart" height="70"></canvas>
   </div>
 
   <div class="result-wrap" id="chartWrap" style="display:none;">
     <h3>Games by Price</h3>
     <div class="chart-controls" id="chartControls"></div>
-    <canvas id="gamesChart" height="105"></canvas>
+    <canvas id="gamesChart" height="70"></canvas>
   </div>
 
   <div class="result-wrap" id="journeyChartWrap" style="display:none;">
@@ -1860,14 +1860,17 @@
     const priceConfig = readPriceGold();
     const stakeConfig = readStakeConfig();
 
-    const labels = priceConfig.map(r => `$${r.price}`);
+    const allMap = buildAllStakeColorMap();
+    const labels = priceConfig.map(r => {
+      const matched = findStake(r.gold, stakeConfig);
+      return matched ? [`$${r.price}`, `Stake ${shortNum(matched.stake)}`] : [`$${r.price}`];
+    });
     const goldPerDollar = priceConfig.map(r => r.price > 0 ? r.gold / r.price : 0);
     const barColors = buildGoldPerDollarGradient(goldPerDollar);
 
     // Build stake colors for x-axis tick
     const stakeColorArr = priceConfig.map(r => {
       const matched = findStake(r.gold, stakeConfig);
-      const allMap = buildAllStakeColorMap();
       return matched ? (allMap[matched.stake] || '#666') : '#666';
     });
 
@@ -1928,7 +1931,7 @@
         backgroundColor: 'rgba(56,189,248,0.1)',
         pointBackgroundColor: '#38BDF8',
         pointRadius: 4,
-        tension: 0.4,
+        tension: 0,
         fill: false,
         yAxisID: 'y',
         order: 1,
@@ -1943,7 +1946,7 @@
 
     const gamesLineCommon = {
       type: 'line',
-      tension: 0.3,
+      tension: 0,
       fill: false,
       yAxisID: 'y2',
       pointRadius: 3,
@@ -1996,7 +1999,7 @@
           color: (ctx) => stakeColorArr[ctx.index] || theme.text2Color,
           font: { size: 12, weight: '600' },
         },
-        grid: { color: theme.gridColor },
+        grid: { display: false },
       },
       y: {
         position: 'left',
@@ -2025,9 +2028,7 @@
         responsive: true,
         interaction: { mode: 'index', intersect: false },
         plugins: {
-          legend: {
-            labels: { color: theme.textColor, font: { size: 12 }, boxWidth: 14 },
-          },
+          legend: { display: false },
           tooltip: {
             backgroundColor: theme.tooltipBg,
             borderColor: theme.tooltipBorder,
@@ -2076,7 +2077,12 @@
       `).join('');
     }
 
-    const labels = simulationResults.map(r => `$${r.price}`);
+    const stakeConfig = readStakeConfig();
+    const stakeColorMap = buildAllStakeColorMap();
+    const labels = simulationResults.map(r => {
+      const matched = findStake(r.gold, stakeConfig);
+      return matched ? [`$${r.price}`, `Stake ${shortNum(matched.stake)}`] : [`$${r.price}`];
+    });
 
     const datasets = seriesDefs
       .filter(s => document.getElementById(`gc_${s.key}`)?.checked)
@@ -2087,7 +2093,7 @@
         backgroundColor: s.color + '22',
         pointBackgroundColor: s.color,
         pointRadius: 4,
-        tension: 0.3,
+        tension: 0,
         fill: false,
         borderWidth: 2,
       }));
@@ -2102,9 +2108,7 @@
         responsive: true,
         interaction: { mode: 'index', intersect: false },
         plugins: {
-          legend: {
-            labels: { color: theme.textColor, font: { size: 12 }, boxWidth: 14 }
-          },
+          legend: { display: false },
           tooltip: {
             backgroundColor: theme.tooltipBg,
             borderColor: theme.tooltipBorder,
@@ -2115,8 +2119,17 @@
         },
         scales: {
           x: {
-            ticks: { color: theme.text2Color, font: { size: 12 } },
-            grid: { color: theme.gridColor },
+            ticks: {
+              color: (ctx) => {
+                const idx = ctx.index;
+                const r = simulationResults[idx];
+                if (!r) return theme.text2Color;
+                const matched = findStake(r.gold, stakeConfig);
+                return matched ? (stakeColorMap[matched.stake] || theme.text2Color) : theme.text2Color;
+              },
+              font: { size: 12, weight: '600' }
+            },
+            grid: { display: false },
           },
           y: {
             ticks: { color: theme.text2Color, font: { size: 11 } },
