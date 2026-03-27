@@ -756,11 +756,11 @@
       <!-- Game params -->
       <div class="config-item">
         <label for="winPts">Win Pts</label>
-        <input type="number" id="winPts" value="13.7" step="0.1" />
+        <input type="number" id="winPts" value="21" step="0.1" />
       </div>
       <div class="config-item">
         <label for="losePts">Lose Pts</label>
-        <input type="number" id="losePts" value="6.85" step="0.1" />
+        <input type="number" id="losePts" value="7" step="0.1" />
       </div>
       <div class="config-item">
         <label for="winRatio">Gold Win Ratio</label>
@@ -987,7 +987,7 @@
     { price: 3,   gold: 4000000 },
     { price: 4,   gold: 5500000 },
     { price: 5,   gold: 8000000 },
-    { price: 7,   gold: 15000000 },
+    { price: 7,   gold: 12000000 },
     { price: 10,  gold: 32000000 },
     { price: 20,  gold: 70000000 },
     { price: 30,  gold: 115000000 },
@@ -997,15 +997,13 @@
   ];
 
   const defaultStakes = [
-    { stake: 40000,       buyInMin: 200000,       goldMinContinue: 40000,       maxout: 2200000 },
-    { stake: 200000,      buyInMin: 2000000,      goldMinContinue: 200000,      maxout: 9900000 },
-    { stake: 1000000,     buyInMin: 9000000,      goldMinContinue: 1000000,     maxout: 39600000 },
-    { stake: 3000000,     buyInMin: 36000000,     goldMinContinue: 3000000,     maxout: 66000000 },
-    { stake: 5000000,     buyInMin: 60000000,     goldMinContinue: 5000000,     maxout: 132000000 },
-    { stake: 10000000,    buyInMin: 120000000,    goldMinContinue: 10000000,    maxout: 264000000 },
-    { stake: 20000000,    buyInMin: 240000000,    goldMinContinue: 20000000,    maxout: 660000000 },
-    { stake: 50000000,    buyInMin: 600000000,    goldMinContinue: 50000000,    maxout: 1320000000 },
-    { stake: 100000000,   buyInMin: 1200000000,   goldMinContinue: 100000000,   maxout: 19200000000 },
+    { stake: 40000,       buyInMin: 200000,       goldMinContinue: 40000,       maxout: 3000000 },
+    { stake: 200000,      buyInMin: 2000000,      goldMinContinue: 200000,      maxout: 15000000 },
+    { stake: 500000,      buyInMin: 10000000,     goldMinContinue: 500000,      maxout: 54000000 },
+    { stake: 1000000,     buyInMin: 36000000,     goldMinContinue: 1000000,     maxout: 96000000 },
+    { stake: 2000000,     buyInMin: 64000000,     goldMinContinue: 2000000,     maxout: 300000000 },
+    { stake: 5000000,     buyInMin: 200000000,    goldMinContinue: 5000000,     maxout: 750000000 },
+    { stake: 10000000,    buyInMin: 500000000,    goldMinContinue: 10000000,    maxout: 19200000000 },
   ];
 
   let simulationResults = [];
@@ -2480,20 +2478,50 @@
     }
   }
 
+  // Smart CSV line splitter that respects quoted values
+  function splitCSVLine(line) {
+    const result = [];
+    let current = '';
+    let inQuotes = false;
+    for (let i = 0; i < line.length; i++) {
+      const ch = line[i];
+      if (ch === '"') { inQuotes = !inQuotes; current += ch; }
+      else if (ch === ',' && !inQuotes) { result.push(current); current = ''; }
+      else { current += ch; }
+    }
+    result.push(current);
+    return result;
+  }
+
+  // Parse a CSV cell: strip quotes, commas, spaces → number or string
+  function parseCSVCell(raw) {
+    let s = raw.trim().replace(/^"|"$/g, '').trim();
+    s = s.replace(/,/g, '').replace(/\s/g, '');
+    if (s.toLowerCase() === 'true') return 'true';
+    if (s.toLowerCase() === 'false') return 'false';
+    if (s === '') return '';
+    const num = Number(s);
+    return isNaN(num) ? s : num;
+  }
+
   function parseAndApplyCSV(csvText) {
     const sections = {};
     let currentSection = null;
     const lines = csvText.split(/\r?\n/);
 
     lines.forEach(line => {
-      const trimmed = line.trim();
-      if (!trimmed) return;
-      const sectionMatch = trimmed.match(/^\[(\w+)\]$/);
+      const cleaned = line.trim().replace(/,+$/g, '').trim(); // strip trailing commas
+      if (!cleaned) return;
+      const sectionMatch = cleaned.match(/^\[(\w+)\]$/);
       if (sectionMatch) {
         currentSection = sectionMatch[1];
         sections[currentSection] = [];
       } else if (currentSection) {
-        sections[currentSection].push(trimmed.split(','));
+        const cells = splitCSVLine(line).map(parseCSVCell);
+        // Skip rows that are all empty
+        if (cells.some(c => c !== '' && c !== 0)) {
+          sections[currentSection].push(cells);
+        }
       }
     });
 
@@ -2501,33 +2529,33 @@
     takePriceSnapshot();
     takeStakeSnapshot();
 
-    // Parse PriceGold
+    // Parse PriceGold (skip header row where first cell is 'Price')
     if (sections['PriceGold']) {
-      const rows = sections['PriceGold'].filter(r => r.length >= 2 && r[0] !== 'Price');
+      const rows = sections['PriceGold'].filter(r => r.length >= 2 && typeof r[0] === 'number');
       if (rows.length > 0) {
         defaultPriceGold.length = 0;
         rows.forEach(r => {
-          const price = parseFloat(r[0]);
-          const gold = parseFloat(r[1]);
-          if (!isNaN(price) && !isNaN(gold)) {
-            defaultPriceGold.push({ price, gold });
-          }
+          const price = Number(r[0]);
+          const gold = Number(r[1]);
+          if (gold > 0) defaultPriceGold.push({ price, gold });
         });
       }
     }
 
     // Parse StakeConfig
     if (sections['StakeConfig']) {
-      const rows = sections['StakeConfig'].filter(r => r.length >= 4 && r[0] !== 'Stake');
+      const rows = sections['StakeConfig'].filter(r => r.length >= 4 && typeof r[0] === 'number');
       if (rows.length > 0) {
         defaultStakes.length = 0;
         rows.forEach(r => {
-          const stake = parseFloat(r[0]);
-          const buyInMin = parseFloat(r[1]);
-          const goldMinContinue = parseFloat(r[2]);
-          const maxout = parseFloat(r[3]);
-          if (!isNaN(stake)) {
-            defaultStakes.push({ stake, buyInMin: buyInMin || 0, goldMinContinue: goldMinContinue || 0, maxout: maxout || 0 });
+          const stake = Number(r[0]);
+          if (stake > 0) {
+            defaultStakes.push({
+              stake,
+              buyInMin: Number(r[1]) || 0,
+              goldMinContinue: Number(r[2]) || 0,
+              maxout: Number(r[3]) || 0
+            });
           }
         });
       }
@@ -2535,13 +2563,13 @@
 
     // Parse GameMechanics
     if (sections['GameMechanics']) {
-      const dataRows = sections['GameMechanics'].filter(r => r[0] !== 'WinPts');
+      const dataRows = sections['GameMechanics'].filter(r => typeof r[0] === 'number');
       if (dataRows.length > 0) {
         const vals = dataRows[0];
         const setVal = (id, idx) => {
           const el = document.getElementById(id);
-          if (el && vals[idx] !== undefined && vals[idx].trim() !== '') {
-            el.value = vals[idx].trim();
+          if (el && vals[idx] !== undefined && vals[idx] !== '') {
+            el.value = String(vals[idx]);
           }
         };
         setVal('winPts', 0);
@@ -2554,7 +2582,7 @@
         if (vals[5] !== undefined) {
           const potEl = document.getElementById('potEnabled');
           if (potEl) {
-            potEl.checked = vals[5].trim().toLowerCase() === 'true';
+            potEl.checked = String(vals[5]).toLowerCase() === 'true';
             togglePotConfig();
           }
         }
@@ -2567,7 +2595,7 @@
     // Parse Scenarios
     if (sections['Scenarios']) {
       rebuildScenarios();
-      const dataRows = sections['Scenarios'].filter(r => r[0] !== 'Winners' && r.length >= 2);
+      const dataRows = sections['Scenarios'].filter(r => typeof r[0] === 'number' && r.length >= 2);
       dataRows.forEach(r => {
         const winners = parseInt(r[0], 10);
         const pct = parseFloat(r[1]);
