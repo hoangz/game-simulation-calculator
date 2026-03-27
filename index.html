@@ -2118,7 +2118,19 @@
     const allStakesSorted = [...allStakeKeys].sort((a, b) => a - b);
 
     const stakeColorMap = buildAllStakeColorMap();
-    const labels = simulationResults.map(r => `$${r.price}`);
+    const stakeConfig = readStakeConfig();
+
+    // Labels with stake info
+    const labels = simulationResults.map(r => {
+      const matched = findStake(r.gold, stakeConfig);
+      return matched ? [`$${r.price}`, `Stake ${shortNum(matched.stake)}`] : [`$${r.price}`];
+    });
+
+    // X-axis colors by stake
+    const xAxisColors = simulationResults.map(r => {
+      const matched = findStake(r.gold, stakeConfig);
+      return matched ? (stakeColorMap[matched.stake] || '#666') : '#666';
+    });
 
     const datasets = allStakesSorted.map(s => ({
       label: shortNum(s),
@@ -2137,9 +2149,7 @@
       options: {
         responsive: true,
         plugins: {
-          legend: {
-            labels: { color: theme.textColor, font: { size: 12 }, boxWidth: 14 }
-          },
+          legend: { display: false },
           tooltip: {
             backgroundColor: theme.tooltipBg,
             borderColor: theme.tooltipBorder,
@@ -2154,8 +2164,11 @@
         scales: {
           x: {
             stacked: true,
-            ticks: { color: theme.text2Color, font: { size: 12 } },
-            grid: { color: theme.gridColor },
+            ticks: {
+              color: (ctx) => xAxisColors[ctx.index] || theme.text2Color,
+              font: { size: 12, weight: '600' }
+            },
+            grid: { display: false },
           },
           y: {
             stacked: true,
