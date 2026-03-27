@@ -752,106 +752,81 @@
   <div class="config-section">
     <div class="config-section-header">Game Mechanics</div>
 
-    <div class="config-grid">
-      <!-- Game params -->
+    <!-- Row 1: Game params + Sim params + Actions -->
+    <div class="config-grid" style="align-items:flex-end;">
       <div class="config-item">
-        <label for="winPts">Win Pts</label>
+        <label>Win Pts</label>
         <input type="number" id="winPts" value="21" step="0.1" />
       </div>
       <div class="config-item">
-        <label for="losePts">Lose Pts</label>
+        <label>Lose Pts</label>
         <input type="number" id="losePts" value="7" step="0.1" />
       </div>
       <div class="config-item">
-        <label for="winRatio">Gold Win Ratio</label>
+        <label>Win Ratio</label>
         <input type="number" id="winRatio" value="0.64" step="0.01" min="0" max="1" />
       </div>
       <div class="config-item">
-        <label for="taxRate">Tax Rate</label>
+        <label>Tax</label>
         <input type="number" id="taxRate" value="0.1" step="0.01" min="0" max="1" />
       </div>
       <div class="config-item">
-        <label for="playersPerTable">Players/Table</label>
+        <label>Players</label>
         <input type="number" id="playersPerTable" value="4" min="2" max="10" onchange="rebuildScenarios()" />
       </div>
-
-      <div class="config-divider"></div>
-
-      <!-- Simulation params -->
       <div class="config-item">
-        <label for="numRuns">Simulations</label>
+        <label>Sims</label>
         <input type="number" id="numRuns" value="2000" min="100" max="50000" />
       </div>
       <div class="config-item">
-        <label for="maxTurns">Max Turns</label>
+        <label>Turns</label>
         <input type="number" id="maxTurns" value="200" min="10" max="5000" />
       </div>
-
-      <!-- Actions -->
-      <div class="config-item">
-        <label>&nbsp;</label>
-        <button id="btnRun" onclick="runSimulation()">&#9654; Run Simulation</button>
-      </div>
-      <div class="config-item">
-        <label>&nbsp;</label>
-        <button class="green" id="btnCSV" onclick="downloadResults()">&#8595; Download Results</button>
-      </div>
-      <div class="config-item">
-        <label>&nbsp;</label>
-        <button class="orange" onclick="exportAllConfig()">&#8599; Export Config</button>
-      </div>
-      <div class="config-item">
-        <label>&nbsp;</label>
-        <button class="purple" onclick="document.getElementById('importFile').click()">&#8598; Import Config</button>
-        <input type="file" id="importFile" accept=".csv,.xlsx,.xls" onchange="importConfigFile(event)" style="display:none;" />
-      </div>
-      <div class="config-item">
-        <label>&nbsp;</label>
-        <button onclick="saveConfig(this)">&#128190; Save</button>
-      </div>
-      <div class="config-item">
-        <label>&nbsp;</label>
-        <button class="small danger" onclick="clearSavedConfig(this)">Clear Save</button>
+      <div class="config-item" style="margin-left:auto;">
+        <div style="display:flex;gap:4px;flex-wrap:wrap;">
+          <button id="btnRun" onclick="runSimulation()" title="Run Simulation">▶ Run</button>
+          <button class="green" id="btnCSV" onclick="downloadResults()" title="Download Results">↓</button>
+          <button class="orange" onclick="exportAllConfig()" title="Export Config">↗</button>
+          <button class="purple" onclick="document.getElementById('importFile').click()" title="Import Config">↙</button>
+          <input type="file" id="importFile" accept=".csv,.xlsx,.xls" onchange="importConfigFile(event)" style="display:none;" />
+          <button onclick="saveConfig(this)" title="Save Config">💾</button>
+          <button class="small danger" onclick="clearSavedConfig(this)" title="Clear Saved">✕</button>
+        </div>
       </div>
     </div>
 
-    <!-- Config Subsection: Scenarios + POT -->
-    <div class="config-subsection">
-      <!-- Left: Scenarios -->
-      <div class="subsection-left">
-        <div class="config-subsection-label">Win/Lose Scenarios</div>
+    <!-- Row 2: Scenarios + POT (side by side) -->
+    <div style="display:flex;gap:16px;margin-top:12px;flex-wrap:wrap;align-items:flex-start;">
+      <!-- Scenarios -->
+      <div style="flex:1;min-width:200px;">
+        <div class="config-subsection-label">Scenarios</div>
         <div id="scenariosBody"></div>
         <div id="scenarioWarning" class="scenario-warning"></div>
-        <div class="winrate-display">Effective win rate: <span id="effectiveWinRate">—</span></div>
+        <div class="winrate-display">Win rate: <span id="effectiveWinRate">—</span></div>
       </div>
 
-      <div class="subsection-divider"></div>
-
-      <!-- Right: POT System -->
-      <div class="subsection-right">
-        <div class="config-subsection-label">POT System</div>
-        <label class="toggle-label">
-          <input type="checkbox" id="potEnabled" onchange="togglePotConfig()" />
-          Enable POT System
-        </label>
-
-        <div id="potConfig">
-          <div class="config-item">
-            <label for="potMultiplier">Pot/Turn</label>
-            <input type="number" id="potMultiplier" value="1" step="0.1" min="0" />
-            <div class="config-hint">x stake</div>
-          </div>
-          <div class="config-item">
-            <label for="potTax">Pot Tax</label>
-            <input type="number" id="potTax" value="0.1" step="0.01" min="0" max="1" />
-          </div>
-          <div class="config-item">
-            <label for="potWinStreak">Win Streak</label>
-            <input type="number" id="potWinStreak" value="2" min="1" max="20" />
-            <div class="config-hint">consecutive wins to trigger</div>
-          </div>
-          <div class="pot-note">
-            POT accumulates each turn. A player winning <em>N</em> consecutive rounds triggers a POT claim. Tax is deducted from POT before payout.
+      <!-- POT System -->
+      <div style="min-width:200px;">
+        <div class="config-subsection-label" style="display:flex;align-items:center;gap:8px;">
+          POT
+          <label class="toggle-label" style="font-size:12px;font-weight:400;">
+            <input type="checkbox" id="potEnabled" onchange="togglePotConfig()" /> ON
+          </label>
+        </div>
+        <div id="potConfig" style="display:none;">
+          <div style="display:flex;gap:10px;flex-wrap:wrap;">
+            <div class="config-item">
+              <label>Pot/Turn</label>
+              <input type="number" id="potMultiplier" value="1" step="0.1" min="0" style="width:70px;" />
+            </div>
+            <div class="config-item">
+              <label>Pot Tax</label>
+              <input type="number" id="potTax" value="0.1" step="0.01" min="0" max="1" style="width:70px;" />
+            </div>
+            <div class="config-item">
+              <label>Streak</label>
+              <input type="number" id="potWinStreak" value="2" min="1" max="20" style="width:60px;" />
+            </div>
           </div>
         </div>
       </div>
