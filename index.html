@@ -2756,15 +2756,16 @@
 
   // ── 12. DOMContentLoaded Init ───────────────────────────────────────────────
   document.addEventListener('DOMContentLoaded', function() {
-    // Apply saved theme
+    // Apply saved theme — default to dark
     const savedTheme = localStorage.getItem('sessionSimTheme');
-    if (savedTheme === 'dark') {
+    if (savedTheme === 'light') {
+      // Stay light (no class)
+      const themeBtn = document.getElementById('themeBtn');
+      if (themeBtn) themeBtn.textContent = '☾';
+    } else {
       document.body.classList.add('dark');
       const themeBtn = document.getElementById('themeBtn');
       if (themeBtn) themeBtn.textContent = '☀';
-    } else {
-      const themeBtn = document.getElementById('themeBtn');
-      if (themeBtn) themeBtn.textContent = '☾';
     }
 
     // Wire info button
