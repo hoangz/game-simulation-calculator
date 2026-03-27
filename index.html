@@ -224,11 +224,11 @@
         <div class="config-grid" style="align-items:flex-end;">
             <div class="config-item">
                 <label>Win Pts</label>
-                <input type="number" id="winpts" value="13.7" step="0.1">
+                <input type="number" id="winpts" value="13.5" step="0.1">
             </div>
             <div class="config-item">
                 <label>Lose Pts</label>
-                <input type="number" id="losepts" value="6.85" step="0.1">
+                <input type="number" id="losepts" value="7.4" step="0.1">
             </div>
             <div class="config-item">
                 <label>Tax Rate</label>
@@ -315,7 +315,7 @@
         <div class="config-table-wrap">
             <h3>Stake &rarr; Buy-in Range</h3>
             <table id="stakeTable">
-                <thead><tr><th>Stake</th><th>Buy-in Min</th><th>Maxout</th><th>Min/Stake</th><th>Max/Stake</th><th>Range</th><th></th></tr></thead>
+                <thead><tr><th>Stake</th><th>Buy-in Min</th><th>GoldMinCont</th><th>Maxout</th><th>Min/Stake</th><th>Max/Stake</th><th>Range</th><th></th></tr></thead>
                 <tbody id="stakeBody"></tbody>
             </table>
             <div class="table-actions">
@@ -376,7 +376,7 @@ const defaultPriceGold = [
     { price: 3,   gold: 4000000 },
     { price: 4,   gold: 5500000 },
     { price: 5,   gold: 8000000 },
-    { price: 7,   gold: 12000000 },
+    { price: 7,   gold: 15000000 },
     { price: 10,  gold: 32000000 },
     { price: 20,  gold: 70000000 },
     { price: 30,  gold: 115000000 },
@@ -386,13 +386,13 @@ const defaultPriceGold = [
 ];
 
 const defaultStakes = [
-    { stake: 40000,       buyinMin: 200000,        buyinMax: 3000000 },
-    { stake: 200000,      buyinMin: 2000000,       buyinMax: 15000000 },
-    { stake: 500000,      buyinMin: 10000000,      buyinMax: 54000000 },
-    { stake: 1000000,     buyinMin: 36000000,      buyinMax: 96000000 },
-    { stake: 2000000,     buyinMin: 64000000,      buyinMax: 300000000 },
-    { stake: 5000000,     buyinMin: 200000000,     buyinMax: 750000000 },
-    { stake: 10000000,    buyinMin: 500000000,     buyinMax: 90000000000 },
+    { stake: 40000,       buyinMin: 200000,     goldMinCont: 40000,      buyinMax: 3000000 },
+    { stake: 200000,      buyinMin: 2000000,    goldMinCont: 200000,     buyinMax: 15000000 },
+    { stake: 500000,      buyinMin: 10000000,   goldMinCont: 500000,     buyinMax: 54000000 },
+    { stake: 1000000,     buyinMin: 36000000,   goldMinCont: 1000000,    buyinMax: 96000000 },
+    { stake: 2000000,     buyinMin: 64000000,   goldMinCont: 2000000,    buyinMax: 300000000 },
+    { stake: 5000000,     buyinMin: 200000000,  goldMinCont: 5000000,    buyinMax: 750000000 },
+    { stake: 10000000,    buyinMin: 500000000,  goldMinCont: 10000000,   buyinMax: 90000000000 },
 ];
 
 let simulationResults = [];
@@ -538,10 +538,12 @@ function renderStakeTable() {
         const range = maxR - minR;
         const sStake = changedStyle(stakeSnapshot, i, 'stake', s.stake);
         const sMin = changedStyle(stakeSnapshot, i, 'buyinMin', s.buyinMin);
+        const sGmc = changedStyle(stakeSnapshot, i, 'goldMinCont', s.goldMinCont);
         const sMax = changedStyle(stakeSnapshot, i, 'buyinMax', s.buyinMax);
         tbody.innerHTML += `<tr>
             <td><input type="text" data-stake-idx="${i}" data-field="stake" value="${fmtNum(s.stake)}" style="${sStake}"></td>
             <td><input type="text" data-stake-idx="${i}" data-field="buyinMin" value="${fmtNum(s.buyinMin)}" style="${sMin}"></td>
+            <td><input type="text" data-stake-idx="${i}" data-field="goldMinCont" value="${fmtNum(s.goldMinCont || s.stake)}" style="${sGmc}"></td>
             <td><input type="text" data-stake-idx="${i}" data-field="buyinMax" value="${fmtNum(s.buyinMax)}" style="${sMax}"></td>
             <td style="color:#4fc3f7;font-weight:600;text-align:right;padding-right:8px;">${minR}x</td>
             <td style="color:#66bb6a;font-weight:600;text-align:right;padding-right:8px;">${maxR}x</td>
@@ -786,7 +788,7 @@ function renderGoldPerDollarChart() {
     });
 }
 function addStakeRow() {
-    defaultStakes.push({ stake: 0, buyinMin: 0, buyinMax: 0 });
+    defaultStakes.push({ stake: 0, buyinMin: 0, goldMinCont: 0, buyinMax: 0 });
     renderStakeTable();
     renderGoldPerDollarChart();
 }
@@ -815,11 +817,12 @@ function readStakeConfig() {
     const rows = [];
     document.querySelectorAll('#stakeBody tr').forEach(tr => {
         const inputs = tr.querySelectorAll('input');
-        if (inputs.length >= 3) {
+        if (inputs.length >= 4) {
             rows.push({
                 stake: parseNum(inputs[0].value),
                 buyinMin: parseNum(inputs[1].value),
-                buyinMax: parseNum(inputs[2].value)
+                goldMinCont: parseNum(inputs[2].value),
+                buyinMax: parseNum(inputs[3].value)
             });
         }
     });
@@ -1387,19 +1390,59 @@ function triggerDownload(content, filename) {
 }
 
 function exportAllCSV() {
-    let csv = '[PRICE_GOLD]\nprice,gold\n';
+    let csv = '[PriceGold]\nPrice,Gold\n';
     readPriceGold().forEach(r => { csv += `${r.price},${r.gold}\n`; });
-    csv += '\n[STAKE_BUYIN]\nstake,buyin_min,buyin_max\n';
-    readStakeConfig().forEach(r => { csv += `${r.stake},${r.buyinMin},${r.buyinMax}\n`; });
-    triggerDownload(csv, 'game_config.csv');
+    csv += '\n[StakeConfig]\nStake,BuyInMin,GoldMinContinue,Maxout\n';
+    readStakeConfig().forEach(r => { csv += `${r.stake},${r.buyinMin},${r.goldMinCont || r.stake},${r.buyinMax}\n`; });
+    // GameMechanics
+    const winpts = parseFloat(document.getElementById('winpts').value);
+    const losepts = parseFloat(document.getElementById('losepts').value);
+    const taxRate = parseFloat(document.getElementById('taxRate').value);
+    const players = parseInt(document.getElementById('numPlayers').value);
+    const potCheck = document.getElementById('potEnabled');
+    const potEnabled = potCheck ? potCheck.checked : false;
+    const potMul = document.getElementById('potMultiplier')?.value || 1;
+    const potTax = document.getElementById('potTax')?.value || 0.1;
+    const potStreak = document.getElementById('potStreak')?.value || 2;
+    // Calculate effective winRatio from scenarios
+    const scenarioInputs = document.querySelectorAll('.scenario-pct');
+    let winRatio = 0.25;
+    if (scenarioInputs.length > 0) {
+        let totalPct = 0;
+        scenarioInputs.forEach((inp, idx) => {
+            const pct = parseFloat(inp.value) || 0;
+            const winners = idx + 1;
+            totalPct += pct;
+            winRatio += (pct / 100) * (winners / 4);
+        });
+        winRatio -= 0.25; // subtract initial
+        if (totalPct > 0) {
+            winRatio = 0;
+            scenarioInputs.forEach((inp, idx) => {
+                const pct = parseFloat(inp.value) || 0;
+                winRatio += (pct / 100) * ((idx + 1) / 4);
+            });
+        }
+    }
+    csv += `\n[GameMechanics]\nWinPts,LosePts,WinRatio,TaxRate,PlayersPerTable,PotEnabled,PotMultiplier,PotTax,PotWinStreak\n`;
+    csv += `${winpts},${losepts},${winRatio},${taxRate},4,${potEnabled},${potMul},${potTax},${potStreak}\n`;
+    // Scenarios
+    csv += `\n[Scenarios]\nWinners,Pct\n`;
+    scenarioInputs.forEach((inp, idx) => {
+        csv += `${idx + 1},${parseFloat(inp.value) || 0}\n`;
+    });
+    triggerDownload(csv, 'session-sim-config.csv');
 }
 
 // Parse a CSV cell: handle quoted values "10,000,000", scientific 9.00E+11, spaces
 function parseCSVCell(raw) {
     let s = raw.trim().replace(/^"|"$/g, ''); // remove surrounding quotes
     s = s.replace(/,/g, '').replace(/\s/g, ''); // remove commas & spaces inside
+    // Keep booleans and text as-is for GameMechanics
+    if (s.toLowerCase() === 'true') return 'true';
+    if (s.toLowerCase() === 'false') return 'false';
     const num = Number(s);
-    return isNaN(num) ? 0 : num;
+    return isNaN(num) ? s : num;
 }
 
 // Smart CSV line splitter: respects quotes
@@ -1527,7 +1570,7 @@ function importExcelFile(file) {
                             const s = parseFloat(String(rows[i][sIdx]).replace(/[^0-9.\-eE+]/g, ''));
                             const mn = parseFloat(String(rows[i][minIdx]).replace(/[^0-9.\-eE+]/g, ''));
                             const mx = parseFloat(String(rows[i][maxIdx]).replace(/[^0-9.\-eE+]/g, ''));
-                            if (s > 0) { newStakes.push({ stake: s, buyinMin: mn, buyinMax: mx }); foundStake = true; }
+                            if (s > 0) { newStakes.push({ stake: s, buyinMin: mn, goldMinCont: s, buyinMax: mx }); foundStake = true; }
                         }
                         imported = true;
                     }
@@ -1578,42 +1621,89 @@ function importAllCSV(file) {
         if (currentSection) sections[currentSection] = sectionLines.join('\n');
 
         let imported = false;
-        let foundPrice = false, foundStake = false;
 
-        // Parse PRICE_GOLD
-        if (sections['PRICE_GOLD']) {
-            const rows = parseCSVSection(sections['PRICE_GOLD']);
+        // Normalize section names (support both old and new format)
+        function getSection(name1, name2) { return sections[name1] || sections[name2]; }
+
+        // Parse PriceGold / PRICE_GOLD
+        const priceSection = getSection('PriceGold', 'PRICE_GOLD');
+        if (priceSection) {
+            const rows = parseCSVSection(priceSection);
             if (rows.length > 0) {
                 defaultPriceGold.length = 0;
                 rows.forEach(r => {
                     if (r.length >= 2 && r[1] > 0) defaultPriceGold.push({ price: r[0], gold: r[1] });
                 });
-                foundPrice = true; imported = true;
+                imported = true;
             }
         }
-        // Parse STAKE_BUYIN
-        if (sections['STAKE_BUYIN']) {
-            const rows = parseCSVSection(sections['STAKE_BUYIN']);
+        // Parse StakeConfig / STAKE_BUYIN
+        const stakeSection = getSection('StakeConfig', 'STAKE_BUYIN');
+        if (stakeSection) {
+            const rows = parseCSVSection(stakeSection);
             if (rows.length > 0) {
                 defaultStakes.length = 0;
                 rows.forEach(r => {
-                    if (r.length >= 3 && r[0] > 0) defaultStakes.push({ stake: r[0], buyinMin: r[1], buyinMax: r[2] });
+                    if (r.length >= 4 && r[0] > 0) {
+                        defaultStakes.push({ stake: r[0], buyinMin: r[1], goldMinCont: r[2], buyinMax: r[3] });
+                    } else if (r.length >= 3 && r[0] > 0) {
+                        defaultStakes.push({ stake: r[0], buyinMin: r[1], goldMinCont: r[0], buyinMax: r[2] });
+                    }
                 });
-                foundStake = true; imported = true;
+                imported = true;
+            }
+        }
+        // Parse GameMechanics
+        const mechSection = sections['GameMechanics'];
+        if (mechSection) {
+            const rows = parseCSVSection(mechSection);
+            if (rows.length > 0) {
+                const r = rows[0]; // single row
+                if (r[0]) document.getElementById('winpts').value = r[0];
+                if (r[1]) document.getElementById('losepts').value = r[1];
+                // r[2] = WinRatio (calculated, skip)
+                if (r[3]) document.getElementById('taxRate').value = r[3];
+                // r[4] = PlayersPerTable (always 4, skip)
+                const potCheck = document.getElementById('potEnabled');
+                if (potCheck && r.length > 5) {
+                    potCheck.checked = (String(r[5]) === '1' || String(r[5]).toLowerCase() === 'true');
+                    const potFields = document.getElementById('potFields');
+                    if (potFields) potFields.style.display = potCheck.checked ? 'flex' : 'none';
+                }
+                if (r[6]) { const el = document.getElementById('potMultiplier'); if (el) el.value = r[6]; }
+                if (r[7]) { const el = document.getElementById('potTax'); if (el) el.value = r[7]; }
+                if (r[8]) { const el = document.getElementById('potStreak'); if (el) el.value = r[8]; }
+                imported = true;
+            }
+        }
+        // Parse Scenarios
+        const scenSection = sections['Scenarios'];
+        if (scenSection) {
+            const rows = parseCSVSection(scenSection);
+            if (rows.length > 0) {
+                rows.forEach(r => {
+                    if (r.length >= 2) {
+                        const winners = Math.round(r[0]);
+                        const pct = r[1];
+                        const el = document.querySelectorAll('.scenario-pct')[winners - 1];
+                        if (el) el.value = pct;
+                    }
+                });
+                imported = true;
             }
         }
 
         if (!imported) {
-            // Try legacy format
+            // Try legacy format (no section headers)
             const firstLine = text.trim().split('\n')[0].trim().toLowerCase().replace(/,+$/g, '');
             if (firstLine.includes('price') && firstLine.includes('gold')) {
                 const rows = parseCSVSection(text);
                 rows.forEach(r => { if (r.length >= 2 && r[1] > 0) defaultPriceGold.push({ price: r[0], gold: r[1] }); });
                 if (defaultPriceGold.length > 0) imported = true;
             }
-            if (firstLine.includes('stake') && firstLine.includes('buyin')) {
+            if (firstLine.includes('stake')) {
                 const rows = parseCSVSection(text);
-                rows.forEach(r => { if (r.length >= 3 && r[0] > 0) defaultStakes.push({ stake: r[0], buyinMin: r[1], buyinMax: r[2] }); });
+                rows.forEach(r => { if (r.length >= 3 && r[0] > 0) defaultStakes.push({ stake: r[0], buyinMin: r[1], goldMinCont: r[0], buyinMax: r[2] }); });
                 if (defaultStakes.length > 0) imported = true;
             }
         }
@@ -1621,11 +1711,12 @@ function importAllCSV(file) {
         if (imported) {
             renderPriceTable();
             renderStakeTable();
+            rebuildScenarios();
             validateConfig();
             scheduleHighlightClear();
         } else {
             priceSnapshot = null; stakeSnapshot = null;
-            alert('Invalid CSV format. Must have [PRICE_GOLD] and/or [STAKE_BUYIN] section.');
+            alert('Invalid CSV format.');
         }
     };
     reader.readAsText(file);
