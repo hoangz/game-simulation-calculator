@@ -872,7 +872,6 @@
             <th>Maxout</th>
             <th>BuyIn/S</th>
             <th>Max/S</th>
-            <th>Prices</th>
             <th></th>
           </tr>
         </thead>
@@ -886,6 +885,12 @@
 
   </div>
   <!-- /Config Tables -->
+
+  <!-- Price ↔ Stake Mapping -->
+  <div class="config-table-wrap" style="margin-bottom:16px;">
+    <h4>Price ↔ Stake Mapping</h4>
+    <div id="stakeMapping"></div>
+  </div>
 
   <!-- 5. Config Warnings -->
   <div id="configWarnings"></div>
@@ -1304,7 +1309,6 @@
         <td style="color:var(--text2);text-align:right;">
           ${maxoutRatio > 0 ? maxoutRatio + 'x' : '—'}
         </td>
-        <td style="text-align:center;">${pricesHtml}</td>
         <td>
           <button class="small danger" onclick="removeStakeRow(${i})">✕</button>
         </td>
@@ -1381,6 +1385,53 @@
     }
 
     warningsEl.innerHTML = parts.join('');
+    renderStakeMapping();
+  }
+
+  // ── 10b. renderStakeMapping ─────────────────────────────────────────────────
+  function renderStakeMapping() {
+    const el = document.getElementById('stakeMapping');
+    if (!el) return;
+    const stakeConfig = defaultStakes.slice().sort((a, b) => a.stake - b.stake);
+    const priceConfig = defaultPriceGold.slice().sort((a, b) => a.price - b.price);
+    const sColorMap = buildAllStakeColorMap();
+
+    // Group prices by stake
+    const groups = {};
+    stakeConfig.forEach(s => { groups[s.stake] = { stake: s, prices: [] }; });
+    const noMatch = [];
+    priceConfig.forEach(p => {
+      const matched = findStake(p.gold, stakeConfig);
+      if (matched && groups[matched.stake]) {
+        groups[matched.stake].prices.push(p);
+      } else {
+        noMatch.push(p);
+      }
+    });
+
+    let html = '<table style="width:100%;border-collapse:collapse;font-size:13px;">';
+    html += '<thead><tr><th>Stake</th><th>Buy-in Range</th><th>Prices</th></tr></thead><tbody>';
+
+    stakeConfig.forEach(s => {
+      const g = groups[s.stake];
+      const c = sColorMap[s.stake] || '#666';
+      const priceList = g.prices.length > 0
+        ? g.prices.map(p => `<span style="color:${c};font-weight:600;">$${p.price}</span>`).join(', ')
+        : `<span style="color:var(--red);font-size:11px;">— empty</span>`;
+      html += `<tr>
+        <td style="color:${c};font-weight:700;">${shortNum(s.stake)}</td>
+        <td style="color:var(--text2);">${shortNum(s.buyInMin)} → ${shortNum(s.maxout)}</td>
+        <td>${priceList}</td>
+      </tr>`;
+    });
+
+    if (noMatch.length > 0) {
+      const list = noMatch.map(p => `<span style="color:var(--red);font-weight:600;">$${p.price}</span>`).join(', ');
+      html += `<tr><td style="color:var(--red);">—</td><td style="color:var(--red);">No match</td><td>${list}</td></tr>`;
+    }
+
+    html += '</tbody></table>';
+    el.innerHTML = html;
   }
 
   // ── 11. Placeholder functions (implemented in Tasks 3-7) ───────────────────
