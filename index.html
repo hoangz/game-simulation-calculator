@@ -376,7 +376,7 @@ const defaultPriceGold = [
     { price: 3,   gold: 4000000 },
     { price: 4,   gold: 5500000 },
     { price: 5,   gold: 8000000 },
-    { price: 7,   gold: 15000000 },
+    { price: 7,   gold: 12000000 },
     { price: 10,  gold: 32000000 },
     { price: 20,  gold: 70000000 },
     { price: 30,  gold: 115000000 },
@@ -386,15 +386,13 @@ const defaultPriceGold = [
 ];
 
 const defaultStakes = [
-    { stake: 40000,       buyinMin: 200000,        buyinMax: 2400000 },
-    { stake: 200000,      buyinMin: 2000000,       buyinMax: 12000000 },
-    { stake: 1000000,     buyinMin: 9000000,       buyinMax: 60000000 },
-    { stake: 3000000,     buyinMin: 45000000,      buyinMax: 180000000 },
-    { stake: 5000000,     buyinMin: 75000000,      buyinMax: 300000000 },
-    { stake: 10000000,    buyinMin: 150000000,     buyinMax: 600000000 },
-    { stake: 20000000,    buyinMin: 300000000,     buyinMax: 1200000000 },
-    { stake: 50000000,    buyinMin: 750000000,     buyinMax: 3000000000 },
-    { stake: 100000000,   buyinMin: 1500000000,    buyinMax: 6000000000 },
+    { stake: 40000,       buyinMin: 200000,        buyinMax: 3000000 },
+    { stake: 200000,      buyinMin: 2000000,       buyinMax: 15000000 },
+    { stake: 500000,      buyinMin: 10000000,      buyinMax: 54000000 },
+    { stake: 1000000,     buyinMin: 36000000,      buyinMax: 96000000 },
+    { stake: 2000000,     buyinMin: 64000000,      buyinMax: 300000000 },
+    { stake: 5000000,     buyinMin: 200000000,     buyinMax: 750000000 },
+    { stake: 10000000,    buyinMin: 500000000,     buyinMax: 90000000000 },
 ];
 
 let simulationResults = [];
@@ -1639,9 +1637,8 @@ function saveConfig() {
         priceGold: defaultPriceGold,
         stakes: defaultStakes,
         params: {
-            winRate: parseFloat(document.getElementById('winRate').value),
-            winPts: parseFloat(document.getElementById('winPts').value),
-            losePts: parseFloat(document.getElementById('losePts').value),
+            winPts: parseFloat(document.getElementById('winpts').value),
+            losePts: parseFloat(document.getElementById('losepts').value),
             taxRate: parseFloat(document.getElementById('taxRate').value),
             players: parseInt(document.getElementById('numPlayers').value),
             maxTurns: parseInt(document.getElementById('maxTurns').value),
@@ -1681,9 +1678,8 @@ function loadSavedConfig() {
         }
         if (config.params) {
             const p = config.params;
-            if (p.winRate != null) document.getElementById('winRate').value = p.winRate;
-            if (p.winPts != null) document.getElementById('winPts').value = p.winPts;
-            if (p.losePts != null) document.getElementById('losePts').value = p.losePts;
+            if (p.winPts != null) document.getElementById('winpts').value = p.winPts;
+            if (p.losePts != null) document.getElementById('losepts').value = p.losePts;
             if (p.taxRate != null) document.getElementById('taxRate').value = p.taxRate;
             if (p.players != null) document.getElementById('numPlayers').value = p.players;
             if (p.maxTurns != null) document.getElementById('maxTurns').value = p.maxTurns;
