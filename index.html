@@ -796,9 +796,17 @@
       </div>
     </div>
 
-    <!-- Row 2: POT + Scenarios (side by side) -->
+    <!-- Row 2: Scenarios + POT (side by side) -->
     <div style="display:flex;gap:16px;margin-top:12px;flex-wrap:wrap;align-items:flex-start;">
-      <!-- POT System (left) -->
+      <!-- Scenarios (left) -->
+      <div style="min-width:200px;">
+        <div class="config-subsection-label">Scenarios</div>
+        <div id="scenariosBody"></div>
+        <div id="scenarioWarning" class="scenario-warning"></div>
+        <div class="winrate-display">Win rate: <span id="effectiveWinRate">—</span></div>
+      </div>
+
+      <!-- POT System (right) -->
       <div style="min-width:180px;">
         <div class="config-subsection-label" style="display:flex;align-items:center;gap:8px;">
           POT
@@ -822,14 +830,6 @@
             </div>
           </div>
         </div>
-      </div>
-
-      <!-- Scenarios (right) -->
-      <div style="flex:1;min-width:200px;">
-        <div class="config-subsection-label">Scenarios</div>
-        <div id="scenariosBody"></div>
-        <div id="scenarioWarning" class="scenario-warning"></div>
-        <div class="winrate-display">Win rate: <span id="effectiveWinRate">—</span></div>
       </div>
     </div>
   </div>
@@ -1132,12 +1132,8 @@
   ];
 
   function buildStakeColorMap(results) {
-    const map = {};
-    const uniqueStakes = [...new Set(results.map(r => r.stake))].sort((a, b) => a - b);
-    uniqueStakes.forEach((stake, i) => {
-      map[stake] = stakeColors[i % stakeColors.length];
-    });
-    return map;
+    // Always use the full stake list for consistent colors
+    return buildAllStakeColorMap();
   }
 
   function buildAllStakeColorMap() {
