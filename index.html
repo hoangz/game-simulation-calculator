@@ -783,8 +783,9 @@
         <input type="number" id="maxTurns" value="200" min="10" max="5000" />
       </div>
       <div class="config-item" style="margin-left:auto;">
-        <div style="display:flex;gap:4px;flex-wrap:wrap;">
+        <div style="display:flex;gap:4px;flex-wrap:wrap;align-items:center;">
           <button id="btnRun" onclick="runSimulation()" title="Run Simulation">▶ Run</button>
+          <button class="icon-btn" id="infoBtn2" onclick="openInfoModal()" title="How it works">i</button>
           <button class="green" id="btnCSV" onclick="downloadResults()" title="Download Results">↓</button>
           <button class="orange" onclick="exportAllConfig()" title="Export Config">↗</button>
           <button class="purple" onclick="document.getElementById('importFile').click()" title="Import Config">↙</button>
@@ -795,18 +796,10 @@
       </div>
     </div>
 
-    <!-- Row 2: Scenarios + POT (side by side) -->
+    <!-- Row 2: POT + Scenarios (side by side) -->
     <div style="display:flex;gap:16px;margin-top:12px;flex-wrap:wrap;align-items:flex-start;">
-      <!-- Scenarios -->
-      <div style="flex:1;min-width:200px;">
-        <div class="config-subsection-label">Scenarios</div>
-        <div id="scenariosBody"></div>
-        <div id="scenarioWarning" class="scenario-warning"></div>
-        <div class="winrate-display">Win rate: <span id="effectiveWinRate">—</span></div>
-      </div>
-
-      <!-- POT System -->
-      <div style="min-width:200px;">
+      <!-- POT System (left) -->
+      <div style="min-width:180px;">
         <div class="config-subsection-label" style="display:flex;align-items:center;gap:8px;">
           POT
           <label class="toggle-label" style="font-size:12px;font-weight:400;">
@@ -817,18 +810,26 @@
           <div style="display:flex;gap:10px;flex-wrap:wrap;">
             <div class="config-item">
               <label>Pot/Turn</label>
-              <input type="number" id="potMultiplier" value="1" step="0.1" min="0" style="width:70px;" />
+              <input type="number" id="potMultiplier" value="1" step="0.1" min="0" style="width:60px;" />
             </div>
             <div class="config-item">
-              <label>Pot Tax</label>
-              <input type="number" id="potTax" value="0.1" step="0.01" min="0" max="1" style="width:70px;" />
+              <label>Tax</label>
+              <input type="number" id="potTax" value="0.1" step="0.01" min="0" max="1" style="width:60px;" />
             </div>
             <div class="config-item">
               <label>Streak</label>
-              <input type="number" id="potWinStreak" value="2" min="1" max="20" style="width:60px;" />
+              <input type="number" id="potWinStreak" value="2" min="1" max="20" style="width:50px;" />
             </div>
           </div>
         </div>
+      </div>
+
+      <!-- Scenarios (right) -->
+      <div style="flex:1;min-width:200px;">
+        <div class="config-subsection-label">Scenarios</div>
+        <div id="scenariosBody"></div>
+        <div id="scenarioWarning" class="scenario-warning"></div>
+        <div class="winrate-display">Win rate: <span id="effectiveWinRate">—</span></div>
       </div>
     </div>
   </div>
@@ -872,10 +873,10 @@
       <table id="stakeTable">
         <thead>
           <tr>
-            <th style="min-width:100px;">Stake</th>
-            <th style="min-width:120px;">Buy-in Min</th>
-            <th style="min-width:120px;">Gold Min Cont</th>
-            <th style="min-width:130px;">Maxout</th>
+            <th>Stake</th>
+            <th>Buy-in Min</th>
+            <th>Gold Min Cont</th>
+            <th>Maxout</th>
             <th>BuyIn/Stake</th>
             <th>Maxout/Stake</th>
             <th></th>
@@ -985,7 +986,19 @@
 
   // ── 2. Number Formatting Functions ─────────────────────────────────────────
   function fmtNum(n) { return Number(n).toLocaleString('de-DE'); }
-  function parseNum(s) { return parseFloat(String(s).replace(/\./g, '').replace(/,/g, '.')) || 0; }
+  function parseNum(s) {
+    const str = String(s).trim();
+    // Handle shortNum format: 40K, 1.0M, 2.5B
+    const shortMatch = str.match(/^([\d.,]+)\s*(K|M|B)$/i);
+    if (shortMatch) {
+      const num = parseFloat(shortMatch[1].replace(/,/g, '.'));
+      const suffix = shortMatch[2].toUpperCase();
+      if (suffix === 'K') return num * 1e3;
+      if (suffix === 'M') return num * 1e6;
+      if (suffix === 'B') return num * 1e9;
+    }
+    return parseFloat(str.replace(/\./g, '').replace(/,/g, '.')) || 0;
+  }
   function shortNum(n) {
     if (n >= 1e9) return (n / 1e9).toFixed(1) + 'B';
     if (n >= 1e6) return (n / 1e6).toFixed(1) + 'M';
@@ -1003,14 +1016,15 @@
 
   // ── 3. Input Formatting Helpers ─────────────────────────────────────────────
   function setupFmtInput(input) {
+    const isStake = input.hasAttribute('data-stake-idx');
     input.addEventListener('focus', function() {
-      // Strip dots (thousand separators) on focus for easy editing
-      const raw = this.value.replace(/\./g, '');
-      this.value = raw;
+      // Show full number on focus for editing
+      const val = parseNum(this.value);
+      this.value = val > 0 ? val : '';
     });
     input.addEventListener('blur', function() {
       const raw = parseNum(this.value);
-      this.value = fmtNum(raw);
+      this.value = isStake ? shortNum(raw) : fmtNum(raw);
       syncInputToData(this);
     });
   }
@@ -1195,11 +1209,14 @@
       const priceHighlight = changedStyle(_priceSnapshot, i, 'price', row.price);
       const goldHighlight = changedStyle(_priceSnapshot, i, 'gold', row.gold);
 
+      // Alternating row tint by stake color
+      const rowTint = stakeColor + '12'; // very subtle bg
       const tr = document.createElement('tr');
+      tr.style.background = rowTint;
       tr.innerHTML = `
-        <td style="${priceHighlight}">
+        <td style="${priceHighlight}color:${stakeColor};font-weight:600;">
           <input type="text" value="${fmtNum(row.price)}"
-            data-price-idx="${i}" data-field="price" />
+            data-price-idx="${i}" data-field="price" style="color:${stakeColor};font-weight:600;" />
         </td>
         <td style="${goldHighlight}">
           <input type="text" value="${fmtNum(row.gold)}"
@@ -1243,19 +1260,19 @@
       const tr = document.createElement('tr');
       tr.innerHTML = `
         <td style="${stakeHighlight}">
-          <input type="text" value="${fmtNum(row.stake)}"
+          <input type="text" value="${shortNum(row.stake)}"
             data-stake-idx="${i}" data-field="stake" />
         </td>
         <td style="${buyInHighlight}">
-          <input type="text" value="${fmtNum(row.buyInMin)}"
+          <input type="text" value="${shortNum(row.buyInMin)}"
             data-stake-idx="${i}" data-field="buyInMin" />
         </td>
         <td style="${goldMinHighlight}">
-          <input type="text" value="${fmtNum(row.goldMinContinue)}"
+          <input type="text" value="${shortNum(row.goldMinContinue)}"
             data-stake-idx="${i}" data-field="goldMinContinue" />
         </td>
         <td style="${maxoutHighlight}">
-          <input type="text" value="${fmtNum(row.maxout)}"
+          <input type="text" value="${shortNum(row.maxout)}"
             data-stake-idx="${i}" data-field="maxout" />
         </td>
         <td style="color:var(--text2);text-align:right;">
