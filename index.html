@@ -796,42 +796,36 @@
       </div>
     </div>
 
-    <!-- Row 2: Scenarios + POT (side by side) -->
-    <div style="display:flex;gap:16px;margin-top:12px;flex-wrap:wrap;align-items:flex-start;">
-      <!-- Scenarios (left) -->
-      <div style="min-width:200px;">
-        <div class="config-subsection-label">Scenarios</div>
-        <div id="scenariosBody"></div>
-        <div id="scenarioWarning" class="scenario-warning"></div>
-        <div class="winrate-display">Win rate: <span id="effectiveWinRate">—</span></div>
-      </div>
+    <!-- Row 2: Scenarios + POT aligned -->
+    <div style="display:flex;gap:14px;margin-top:12px;flex-wrap:wrap;align-items:flex-end;">
+      <!-- Scenarios -->
+      <div id="scenariosBody" style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;"></div>
+      <div id="scenarioWarning" class="scenario-warning" style="display:none;"></div>
 
-      <!-- POT System (right) -->
-      <div style="min-width:180px;">
-        <div class="config-subsection-label" style="display:flex;align-items:center;gap:8px;">
-          POT
-          <label class="toggle-label" style="font-size:12px;font-weight:400;">
-            <input type="checkbox" id="potEnabled" onchange="togglePotConfig()" /> ON
-          </label>
+      <div style="width:1px;height:36px;background:var(--border-strong);flex-shrink:0;"></div>
+
+      <!-- POT toggle + fields inline -->
+      <div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;">
+        <div class="config-item">
+          <label style="display:flex;align-items:center;gap:4px;">POT <input type="checkbox" id="potEnabled" onchange="togglePotConfig()" /></label>
         </div>
-        <div id="potConfig" style="display:none;">
-          <div style="display:flex;gap:10px;flex-wrap:wrap;">
-            <div class="config-item">
-              <label>Pot/Turn</label>
-              <input type="number" id="potMultiplier" value="1" step="0.1" min="0" style="width:60px;" />
-            </div>
-            <div class="config-item">
-              <label>Tax</label>
-              <input type="number" id="potTax" value="0.1" step="0.01" min="0" max="1" style="width:60px;" />
-            </div>
-            <div class="config-item">
-              <label>Streak</label>
-              <input type="number" id="potWinStreak" value="2" min="1" max="20" style="width:50px;" />
-            </div>
+        <div id="potConfig" style="display:none;gap:10px;align-items:flex-end;">
+          <div class="config-item">
+            <label>Pot/Turn</label>
+            <input type="number" id="potMultiplier" value="1" step="0.1" min="0" style="width:60px;" />
+          </div>
+          <div class="config-item">
+            <label>Tax</label>
+            <input type="number" id="potTax" value="0.1" step="0.01" min="0" max="1" style="width:60px;" />
+          </div>
+          <div class="config-item">
+            <label>Streak</label>
+            <input type="number" id="potWinStreak" value="2" min="1" max="20" style="width:50px;" />
           </div>
         </div>
       </div>
     </div>
+    <div class="winrate-display" style="margin-top:6px;">Win rate: <span id="effectiveWinRate">—</span></div>
   </div>
   <!-- /Config Section -->
 
@@ -2773,7 +2767,8 @@
 
   function togglePotConfig() {
     const enabled = document.getElementById('potEnabled').checked;
-    document.getElementById('potConfig').style.display = enabled ? 'flex' : 'none';
+    const el = document.getElementById('potConfig');
+    el.style.display = enabled ? 'flex' : 'none';
   }
 
   // ── 12. DOMContentLoaded Init ───────────────────────────────────────────────
