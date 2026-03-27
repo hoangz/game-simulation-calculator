@@ -805,23 +805,21 @@
       <div style="width:1px;height:36px;background:var(--border-strong);flex-shrink:0;"></div>
 
       <!-- POT toggle + fields inline -->
-      <div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;">
+      <div class="config-item">
+        <label style="display:flex;align-items:center;gap:4px;">POT <input type="checkbox" id="potEnabled" onchange="togglePotConfig()" /></label>
+      </div>
+      <div id="potConfig" style="display:none;gap:10px;align-items:flex-end;flex-wrap:wrap;">
         <div class="config-item">
-          <label style="display:flex;align-items:center;gap:4px;">POT <input type="checkbox" id="potEnabled" onchange="togglePotConfig()" /></label>
+          <label>Pot/Turn</label>
+          <input type="number" id="potMultiplier" value="1" step="0.1" min="0" style="width:60px;" />
         </div>
-        <div id="potConfig" style="display:none;gap:10px;align-items:flex-end;">
-          <div class="config-item">
-            <label>Pot/Turn</label>
-            <input type="number" id="potMultiplier" value="1" step="0.1" min="0" style="width:60px;" />
-          </div>
-          <div class="config-item">
-            <label>Tax</label>
-            <input type="number" id="potTax" value="0.1" step="0.01" min="0" max="1" style="width:60px;" />
-          </div>
-          <div class="config-item">
-            <label>Streak</label>
-            <input type="number" id="potWinStreak" value="2" min="1" max="20" style="width:50px;" />
-          </div>
+        <div class="config-item">
+          <label>Tax</label>
+          <input type="number" id="potTax" value="0.1" step="0.01" min="0" max="1" style="width:60px;" />
+        </div>
+        <div class="config-item">
+          <label>Streak</label>
+          <input type="number" id="potWinStreak" value="2" min="1" max="20" style="width:50px;" />
         </div>
       </div>
     </div>
@@ -1311,47 +1309,42 @@
 
     const stakeConfig = readStakeConfig();
     const priceConfig = readPriceGold();
-    const warnings = [];
+    const sColorMap = buildAllStakeColorMap();
+    const parts = [];
 
-    // Check stakes with no matching price entry (no price row has gold in buyInMin..maxout range)
-    stakeConfig.forEach(s => {
-      const hasMatchingPrice = priceConfig.some(p => p.gold >= s.buyInMin && p.gold <= s.maxout);
-      if (!hasMatchingPrice && s.stake > 0) {
-        warnings.push({
-          cls: 'stake-unused',
-          msg: `⚠ Stake ${shortNum(s.stake)}: no price entry maps to this stake range`
-        });
-      }
+    // 1. Stakes with no matching price — grouped
+    const unusedStakes = stakeConfig.filter(s => {
+      return s.stake > 0 && !priceConfig.some(p => findStake(p.gold, stakeConfig)?.stake === s.stake);
     });
-
-    // Check prices with no matching stake (gold doesn't fall in any stake's buyInMin range)
-    priceConfig.forEach(p => {
-      if (p.price <= 0) return;
-      const matched = findStake(p.gold, stakeConfig);
-      if (!matched) {
-        warnings.push({
-          cls: 'gold-nomatch',
-          msg: `✕ Price $${p.price}: gold ${shortNum(p.gold)} below minimum buy-in for any stake`
-        });
-      }
-    });
-
-    // Check maxout gaps: maxout[i] < buyInMin[i+1]
-    const sortedStakes = stakeConfig.slice().sort((a, b) => a.stake - b.stake);
-    for (let i = 0; i < sortedStakes.length - 1; i++) {
-      const curr = sortedStakes[i];
-      const next = sortedStakes[i + 1];
-      if (curr.maxout < next.buyInMin) {
-        warnings.push({
-          cls: 'stake-unused',
-          msg: `⚠ Gap: maxout of ${shortNum(curr.stake)} (${shortNum(curr.maxout)}) < buyIn of ${shortNum(next.stake)} (${shortNum(next.buyInMin)})`
-        });
-      }
+    if (unusedStakes.length > 0) {
+      const list = unusedStakes.map(s => {
+        const c = sColorMap[s.stake] || '#ffb74d';
+        return `<span style="color:${c};font-weight:700;">${shortNum(s.stake)}</span>`;
+      }).join(', ');
+      parts.push(`<span class="warn-tag stake-unused">⚠ No package for stakes: ${list}</span>`);
     }
 
-    warningsEl.innerHTML = warnings.map(w =>
-      `<span class="warn-tag ${w.cls}">${w.msg}</span>`
-    ).join('');
+    // 2. Prices with no matching stake — grouped
+    const unmatchedPrices = priceConfig.filter(p => p.price > 0 && !findStake(p.gold, stakeConfig));
+    if (unmatchedPrices.length > 0) {
+      const list = unmatchedPrices.map(p => `<span style="color:#ef5350;font-weight:700;">$${p.price}</span>`).join(', ');
+      parts.push(`<span class="warn-tag gold-nomatch">✕ No matching stake: ${list}</span>`);
+    }
+
+    // 3. Maxout gaps — grouped
+    const sortedStakes = stakeConfig.slice().sort((a, b) => a.stake - b.stake);
+    const gapStakes = [];
+    for (let i = 0; i < sortedStakes.length - 1; i++) {
+      if (sortedStakes[i].maxout < sortedStakes[i + 1].buyInMin) {
+        const c = sColorMap[sortedStakes[i].stake] || '#ffb74d';
+        gapStakes.push(`<span style="color:${c};font-weight:700;">${shortNum(sortedStakes[i].stake)}</span>`);
+      }
+    }
+    if (gapStakes.length > 0) {
+      parts.push(`<span class="warn-tag stake-unused">⚠ Maxout gap: ${gapStakes.join(', ')}</span>`);
+    }
+
+    warningsEl.innerHTML = parts.join('');
   }
 
   // ── 11. Placeholder functions (implemented in Tasks 3-7) ───────────────────
