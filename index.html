@@ -897,9 +897,9 @@
       <table id="stakeTable">
         <thead>
           <tr>
-            <th>Stake</th>
-            <th>Buy-in Min</th>
-            <th style="min-width:130px;">Gold Min Continue</th>
+            <th style="min-width:100px;">Stake</th>
+            <th style="min-width:120px;">Buy-in Min</th>
+            <th style="min-width:120px;">Gold Min Cont</th>
             <th style="min-width:130px;">Maxout</th>
             <th>BuyIn/Stake</th>
             <th>Maxout/Stake</th>
@@ -1176,8 +1176,9 @@
   }
 
   function changedStyle(oldArr, idx, field, newVal) {
+    if (!oldArr || oldArr.length === 0) return ''; // no snapshot = no highlight
     const isDark = document.body.classList.contains('dark');
-    const highlightBg = isDark ? 'background:#0A3A1A;' : 'background:#D1FAE5;';
+    const highlightBg = isDark ? 'background:#0A3A1A;color:#4ADE80;' : 'background:#D1FAE5;color:#15803d;';
     if (!oldArr[idx]) return highlightBg;
     const oldVal = oldArr[idx][field];
     return String(oldVal) !== String(newVal) ? highlightBg : '';
