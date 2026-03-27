@@ -1125,15 +1125,32 @@
   ];
 
   function buildStakeColorMap(results) {
-    // Always use the full stake list for consistent colors
-    return buildAllStakeColorMap();
+    // Color by USED stakes only — alternating based on appearance order
+    const map = {};
+    const usedStakes = [...new Set(results.filter(r => r.stake > 0).map(r => r.stake))].sort((a, b) => a - b);
+    usedStakes.forEach((stake, i) => {
+      map[stake] = stakeColors[i % stakeColors.length];
+    });
+    return map;
   }
 
   function buildAllStakeColorMap() {
     const map = {};
-    const sorted = defaultStakes.slice().sort((a, b) => a.stake - b.stake);
-    sorted.forEach((row, i) => {
-      map[row.stake] = stakeColors[i % stakeColors.length];
+    const stakeConfig = defaultStakes.slice().sort((a, b) => a.stake - b.stake);
+    const priceConfig = defaultPriceGold;
+    // Find which stakes are actually used by prices
+    const usedStakes = [];
+    stakeConfig.forEach(s => {
+      const isUsed = priceConfig.some(p => {
+        const matched = findStake(p.gold, stakeConfig);
+        return matched && matched.stake === s.stake;
+      });
+      if (isUsed) usedStakes.push(s.stake);
+    });
+    // If no prices loaded yet, fall back to all stakes
+    const list = usedStakes.length > 0 ? usedStakes : stakeConfig.map(s => s.stake);
+    list.forEach((stake, i) => {
+      map[stake] = stakeColors[i % stakeColors.length];
     });
     return map;
   }
