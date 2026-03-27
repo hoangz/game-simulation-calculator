@@ -492,6 +492,12 @@
       border-radius: var(--radius);
       padding: 14px 16px;
       box-shadow: var(--shadow);
+      overflow-x: auto;
+    }
+
+    .config-table-wrap table {
+      width: 100%;
+      border-collapse: collapse;
     }
 
     .config-table-wrap h4 {
@@ -535,42 +541,28 @@
     }
 
     td {
-      padding: 7px 10px;
-      border-bottom: 1px solid var(--border);
+      padding: 6px 8px;
+      border: 1px solid var(--border);
       color: var(--text);
       vertical-align: middle;
-    }
-
-    tr:nth-child(even) td {
-      background: var(--row-even);
-    }
-
-    tr:nth-child(odd) td {
-      background: var(--row-odd);
-    }
-
-    tr:hover td {
-      background: var(--row-hover);
+      font-size: 13px;
     }
 
     .config-table-wrap td input {
       width: 100%;
-      padding: 4px 7px;
-      border: 1px solid var(--border);
-      border-radius: 5px;
-      background: var(--bg);
+      padding: 4px 6px;
+      border: none;
+      border-radius: 0;
+      background: transparent;
       color: var(--text);
       font-family: inherit;
       font-size: 13px;
       text-align: right;
       outline: none;
-      transition: border-color 0.2s, background 0.2s, box-shadow 0.2s;
     }
 
     .config-table-wrap td input:focus {
-      border-color: var(--accent);
-      background: var(--bg);
-      box-shadow: 0 0 0 2px rgba(0, 102, 204, 0.15);
+      background: var(--accent-light);
     }
 
     /* ── Config Warnings ── */
